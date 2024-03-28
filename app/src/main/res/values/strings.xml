@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">禁止卸载</string>
+    <string name="app_description">禁止卸载应用和清除应用数据</string>
+    <string name="group_title_module_status">模块状态</string>
+    <string name="group_title_function">功能配置</string>
+    <string name="switch_title_ban_uninstall">禁止卸载应用</string>
+    <string name="switch_title_ban_clear_data">禁止清除数据</string>
+    <string name="switch_title_dev_mode">开发模式</string>
+    <string name="module_status_active">已激活</string>
+    <string name="module_status_disable">未激活</string>
+    <string name="module_active_mode">运行模式: %1$s</string>
+    <string name="icon_description_sync">同步配置给系统</string>
+    <string name="icon_description_say_hello">测试消息</string>
+</resources>

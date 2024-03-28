@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BanUninstall</string>
+    <string name="app_description">Prevent app be uninstalled or app data be cleared</string>
+    <string name="group_title_module_status">Module status</string>
+    <string name="group_title_function">Function configs</string>
+    <string name="switch_title_ban_uninstall">Ban uninstall apps</string>
+    <string name="switch_title_ban_clear_data">Ban clear apps\' data</string>
+    <string name="switch_title_dev_mode">Dev mode</string>
+    <string name="module_status_active">Actived</string>
+    <string name="module_status_disable">Disabled</string>
+    <string name="module_active_mode">Running on: %1$s</string>
+    <string name="icon_description_sync">Sync configs to system</string>
+    <string name="icon_description_say_hello">test msg</string>
+</resources>
