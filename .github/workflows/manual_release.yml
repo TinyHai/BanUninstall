@@ -26,7 +26,8 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          base64 -d ${{ secrets.KEYSTORE_BASE64 }} > keystore.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" >> jks.base64
+          base64 -d jks.base64 > keystore.jks
 
       - name: Build with Gradle
         env:
