@@ -1,3 +1,5 @@
+import com.android.builder.model.proto.ide.SigningConfig
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
@@ -6,6 +8,15 @@ plugins {
 android {
     namespace = "cn.tinyhai.ban_uninstall"
     compileSdk = 34
+
+    signingConfigs {
+        register("release") {
+            storeFile = file("../keystore.jks")
+            storePassword = System.getenv("KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
 
     defaultConfig {
         applicationId = "cn.tinyhai.ban_uninstall"
@@ -24,7 +35,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = getByName("debug").signingConfig
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
