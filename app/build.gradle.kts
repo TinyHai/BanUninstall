@@ -1,3 +1,4 @@
+import org.gradle.kotlin.dsl.support.uppercaseFirstChar
 import java.io.ByteArrayOutputStream
 
 plugins {
@@ -63,6 +64,50 @@ android {
     }
     kotlinOptions {
         jvmTarget = "1.8"
+    }
+}
+
+afterEvaluate {
+    android.applicationVariants.all {
+        val buildType = buildType.name
+        val flavor = flavorName
+        val versionCode = versionCode
+        val versionName = this.versionName
+        val renameTaskName =
+            "rename${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}Output"
+        tasks.register(renameTaskName) {
+            val apkName = buildString {
+                append("app")
+                if (flavor.isNotBlank()) {
+                    append("-$flavor")
+                }
+                append("-$buildType")
+                append(".apk")
+            }
+            val newApkName = "${rootProject.name}_$versionName.apk"
+            val apkPath = buildString {
+                append(layout.buildDirectory.asFile.get().path)
+                append("/outputs/apk/")
+                if (flavor.isNotBlank()) {
+                    append("$flavor/")
+                }
+                append(buildType)
+            }
+            val apkFile = File(apkPath, apkName)
+            doLast {
+                apkFile.renameTo(File(apkPath, newApkName))
+                File(apkPath, "versionCode").bufferedWriter().use {
+                    it.append(versionCode.toString())
+                    it.flush()
+                }
+                File(apkPath, "versionName").bufferedWriter().use {
+                    it.append(versionName)
+                    it.flush()
+                }
+            }
+        }
+        tasks.findByName("assemble${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}")
+            ?.finalizedBy(renameTaskName)
     }
 }
 
