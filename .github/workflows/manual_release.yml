@@ -49,12 +49,23 @@ jobs:
           name: BanUninstall
           path: app/build/outputs/apk/release/*.apk
 
-      - name: Release
+      - name: Release to current repository
         uses: softprops/action-gh-release@v2
         with:
           name: BanUninstall
           tag_name: ${{ env.TAG_NAME }}
           draft: true
+          token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
+          files: |
+            app/build/outputs/apk/release/*.apk
+
+      - name: Release to xposed module repository
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ format('BanUninstall_{0}', env.TAG_NAME) }}
+          tag_name: ${{ env.TAG_NAME }}
+          draft: true
+          repository: Xposed-Modules-Repo/cn.tinyhai.ban_uninstall
           token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
           files: |
             app/build/outputs/apk/release/*.apk

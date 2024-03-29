@@ -20,6 +20,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "禁止卸载"
+rootProject.name = "BanUninstall"
 include(":app")
 include(":hiddenApi")
