@@ -1,9 +1,8 @@
 package cn.tinyhai.ban_uninstall.hook
 
+import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.os.IBinder
-import android.os.ServiceManager
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.transactor.Transactor
 import cn.tinyhai.ban_uninstall.utils.LogUtils
@@ -40,23 +39,35 @@ class HookSystem : BaseUnhookableHooker() {
         get() = "HookSystem"
 
     override fun createOneshotHook(lp: XC_LoadPackage.LoadPackageParam) {
-        val addService = ServiceManager::class.java.getDeclaredMethod(
-            "addService",
-            String::class.java,
-            IBinder::class.java
-        )
-        val hooker: Array<XC_MethodHook.Unhook?> = arrayOf(null)
-        hooker[0] = XposedBridge.hookMethod(addService, object : XC_MethodHook() {
-            override fun afterHookedMethod(param: MethodHookParam) {
-                if (param.args[0] == "package") {
-                    Transactor.packageMangerReady()
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        HookLaunchItemForInjectClient().startOneshotHook(lp)
+        val unhook: Array<XC_MethodHook.Unhook?> = arrayOf(null)
+        unhook[0] = findAndHookFirst(
+            "com.android.server.SystemServiceManager",
+            lp.classLoader,
+            "startBootPhase",
+            object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val phase = param.args.lastOrNull() as? Int ?: 0
+                    if (phase == 1000 /* PHASE_BOOT_COMPLETED */) {
+                        Transactor.onSystemBootCompleted()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            HookLaunchItemForInjectClient().startOneshotHook(lp)
+                        }
+                        val activityThread =
+                            XposedHelpers.findClass("android.app.ActivityThread", lp.classLoader)
+                                .getDeclaredField("sCurrentActivityThread")
+                                .also { it.isAccessible = true }.get(null)
+                        val systemContext =
+                            activityThread::class.java.getDeclaredField("mSystemContext")
+                                .also { it.isAccessible = true }.get(activityThread) as? Context
+                        LogUtils.log("systemContext: $systemContext")
+                        systemContext?.let {
+                            XSharedPrefs.listenSelfRemoved(it)
+                        }
+                        unhook[0]?.unhook()
                     }
-                    hooker[0]?.unhook()
                 }
             }
-        })
+        )
     }
 
     override fun createHooks(lp: XC_LoadPackage.LoadPackageParam): List<XC_MethodHook.Unhook> {
@@ -98,7 +109,7 @@ class HookSystem : BaseUnhookableHooker() {
 
     override fun init(lp: XC_LoadPackage.LoadPackageParam) {
         XSharedPrefs.init()
-        XSharedPrefs.runAfterReload {
+        XSharedPrefs.registerPrefsChangeListener {
             LogUtils.log("prefs reloaded")
             unhook()
             startHook(lp)

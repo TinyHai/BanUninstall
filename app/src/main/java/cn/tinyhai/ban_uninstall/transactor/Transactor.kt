@@ -6,9 +6,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.IPackageManager
 import android.content.pm.PackageInfo
 import android.os.Bundle
-import android.os.Handler
 import android.os.IBinder.DeathRecipient
-import android.os.Looper
 import android.os.ServiceManager
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.ITransactor
@@ -16,7 +14,6 @@ import cn.tinyhai.ban_uninstall.MainActivity
 import cn.tinyhai.ban_uninstall.utils.HandlerUtils
 import cn.tinyhai.ban_uninstall.utils.LogUtils
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
-import de.robv.android.xposed.XposedBridge
 import rikka.parcelablelist.ParcelableListSlice
 import java.io.File
 import kotlin.concurrent.thread
@@ -88,13 +85,13 @@ object Transactor : ITransactor.Stub() {
         }
     }
 
-    fun packageMangerReady() {
+    fun onSystemBootCompleted() {
         pm = IPackageManager.Stub.asInterface(ServiceManager.getService("package"))
         loadBannedPkgList()
     }
 
     private fun loadBannedPkgList() {
-        thread {
+        HandlerUtils.postWorker {
             val hashSet = HashSet<String>()
             synchronized(bannedPkgListFile) {
                 runCatching {
@@ -112,41 +109,38 @@ object Transactor : ITransactor.Stub() {
                 }
             }
             synchronized(bannedPkgSet) {
+                bannedPkgSet.clear()
                 bannedPkgSet.addAll(hashSet)
             }
         }
     }
 
     private fun postStoreJob() {
-        HandlerUtils.removeRunnable(storeBannedPkgListJob)
-        HandlerUtils.postDelay(storeBannedPkgListJob, STORE_BANNED_PKG_LIST_DELAY)
+        HandlerUtils.removeWorkerRunnable(storeBannedPkgListJob)
+        HandlerUtils.postWorkerDelay(storeBannedPkgListJob, STORE_BANNED_PKG_LIST_DELAY)
     }
 
     private fun storeBannedPkgList() {
-        thread {
-            synchronized(bannedPkgListFile) {
-                val list = synchronized(bannedPkgSet) {
-                    bannedPkgSet.toList()
+        synchronized(bannedPkgListFile) {
+            val list = allBannedPackages
+            runCatching {
+                bannedPkgListFile.renameTo(bakFile)
+                bannedPkgListFile.bufferedWriter().use {
+                    list.forEach { pkg ->
+                        it.write(pkg)
+                        it.newLine()
+                    }
                 }
-                runCatching {
-                    bannedPkgListFile.renameTo(bakFile)
-                    bannedPkgListFile.bufferedWriter().use {
-                        list.forEach { pkg ->
-                            it.write(pkg)
-                            it.newLine()
-                        }
-                    }
-                }.onFailure {
-                    LogUtils.log(it)
-                    if (bakFile.exists()) {
-                        bakFile.renameTo(bannedPkgListFile)
-                    }
-                }.onSuccess {
-                    if (bakFile.exists()) {
-                        bakFile.delete()
-                    }
-                    LogUtils.log("bannedPkgList saved")
+            }.onFailure {
+                LogUtils.log(it)
+                if (bakFile.exists()) {
+                    bakFile.renameTo(bannedPkgListFile)
                 }
+            }.onSuccess {
+                if (bakFile.exists()) {
+                    bakFile.delete()
+                }
+                LogUtils.log("bannedPkgList saved")
             }
         }
     }

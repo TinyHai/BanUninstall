@@ -1,5 +1,9 @@
 package cn.tinyhai.ban_uninstall.utils
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
@@ -9,15 +13,10 @@ import de.robv.android.xposed.XposedBridge
 object XSharedPrefs {
     private lateinit var prefs: XSharedPreferences
 
-    @Volatile
-    private var loading = false
-
-    @Volatile
     private var registered: Boolean = false
 
     private val listeners = ArrayList<() -> Unit>()
 
-    private const val NOTIFY_DELAY_MS = 5_000L
     private val notifyListenerJob by lazy {
         Runnable {
             val listeners = listeners.toList()
@@ -28,17 +27,20 @@ object XSharedPrefs {
         }
     }
 
-    private val reloadOnWorker by lazy {
+    private const val UPDATE_DELAY = 2000L
+    private val updateJob by lazy {
         Runnable {
-            reloadAndNotify()
+            updater.requestUpdate()
         }
     }
 
     private val prefsChangeListener by lazy {
         OnSharedPreferenceChangeListener { _, _ ->
-            HandlerUtils.postWorker(reloadOnWorker)
+            postUpdateJob()
         }
     }
+
+    private lateinit var updater: Updater<BooleanArray>
 
     fun init() {
         val xpVersion = XposedBridge.getXposedVersion()
@@ -47,6 +49,33 @@ object XSharedPrefs {
         if (xpVersion >= 93) {
             registerPrefChangeListener()
         }
+        prefs.reload()
+        updater =
+            SimpleUpdater(
+                initValue = getPrefsSnapshot(),
+                shouldUpdate = { old, new ->
+                    !new.contentEquals(old)
+                },
+                onRequestUpdate = { reloadAndUpdate() },
+                onUpdateSuccess = { postNotifyReloadListener() }
+            )
+    }
+
+    fun listenSelfRemoved(context: Context) {
+        LogUtils.log("listenSelfRemoved")
+        val intentFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
+            addDataScheme("package")
+        }
+        context.registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val packageName = intent.data?.encodedSchemeSpecificPart
+                if (intentFilter.hasAction(intent.action) && packageName == BuildConfig.APPLICATION_ID) {
+                    LogUtils.log("self package removed")
+                    unregisterPrefChangeListener()
+                }
+            }
+        }, intentFilter)
     }
 
     fun registerPrefChangeListener() {
@@ -60,6 +89,14 @@ object XSharedPrefs {
         }
     }
 
+    fun unregisterPrefChangeListener() {
+        if (registered) {
+            LogUtils.log("unregister prefs listener")
+            prefs.unregisterOnSharedPreferenceChangeListener(prefsChangeListener)
+            registered = false
+        }
+    }
+
     val isBanUninstall
         get() = prefs.getBoolean(App.SP_KEY_BAN_UNINSTALL, true)
 
@@ -69,38 +106,41 @@ object XSharedPrefs {
     val isDevMode
         get() = prefs.getBoolean(App.SP_KEY_DEV_MODE, false)
 
-    fun runAfterReload(afterReload: () -> Unit) {
-        listeners.add(afterReload)
+    fun registerPrefsChangeListener(onPrefsChange: () -> Unit) {
+        listeners.add(onPrefsChange)
     }
 
     fun reload() {
         if (XposedBridge.getXposedVersion() > 92) {
             return
         }
-        reloadAndNotify()
+        updater.requestUpdate()
     }
 
-    private fun reloadAndNotify() {
+    private fun getPrefsSnapshot(): BooleanArray {
+        return booleanArrayOf(isBanUninstall, isBanClearData, isDevMode)
+    }
+
+    private fun postUpdateJob() {
+        HandlerUtils.removeWorkerRunnable(updateJob)
+        HandlerUtils.postWorkerDelay(updateJob, UPDATE_DELAY)
+    }
+
+    private fun reloadAndUpdate() {
         if (!HandlerUtils.checkWorkerThread()) {
             HandlerUtils.postWorker {
-                reloadAndNotify()
+                reloadAndUpdate()
             }
             return
         }
-        if (loading) {
-            return
-        }
         LogUtils.log("start reload prefs")
-        loading = true
-        HandlerUtils.removeRunnable(notifyListenerJob)
         prefs.reload()
-        prefs.getBoolean(App.SP_KEY_DEV_MODE, false)
-        postNotifyReloadListener()
+
+        updater.finishUpdate(getPrefsSnapshot())
     }
 
     private fun postNotifyReloadListener() {
         LogUtils.log("postNotifyReloadListener")
-        HandlerUtils.postDelay(notifyListenerJob, NOTIFY_DELAY_MS)
-        loading = false
+        HandlerUtils.postDelay(notifyListenerJob, 0)
     }
 }

@@ -1,8 +1,17 @@
-import com.android.builder.model.proto.ide.SigningConfig
+import java.io.ByteArrayOutputStream
 
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+}
+
+fun String.execute(): String {
+    val byteOut = ByteArrayOutputStream()
+    project.exec {
+        commandLine = this@execute.split("\\s".toRegex())
+        standardOutput = byteOut
+    }
+    return String(byteOut.toByteArray()).trim()
 }
 
 android {
@@ -23,7 +32,7 @@ android {
         minSdk = 21
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -36,6 +45,7 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            versionNameSuffix = "-${"git rev-parse --verify --short HEAD".execute()}"
         }
     }
 

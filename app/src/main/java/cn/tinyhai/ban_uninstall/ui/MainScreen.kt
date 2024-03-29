@@ -26,7 +26,6 @@ import cn.tinyhai.ban_uninstall.vm.MainViewModel
 import com.alorma.compose.settings.ui.SettingsGroup
 import com.alorma.compose.settings.ui.SettingsMenuLink
 import com.alorma.compose.settings.ui.SettingsSwitch
-import de.robv.android.xposed.XposedBridge
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -146,7 +145,7 @@ private fun MainScreenContent(
             }
             SettingsSwitch(
                 state = state.banClearData,
-                enabled = state.banUninstall,
+                enabled = state.isActive,
                 title = { Text(text = stringResource(R.string.switch_title_ban_clear_data)) },
             ) {
                 onBanClearData(it)
