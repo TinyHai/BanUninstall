@@ -2,9 +2,11 @@ name: Manual Release
 on:
   workflow_dispatch:
     inputs:
-      name:
-        description: "Release-Build"
-        default: "Generate release build"
+      publish:
+        description: "Publish to Xposed Module Repository"
+        type: boolean
+        default: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -54,17 +56,18 @@ jobs:
         with:
           name: BanUninstall
           tag_name: ${{ env.TAG_NAME }}
-          draft: true
+          body_path: ${{ github.workspace }}/CHANGELOG.md
           token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
           files: |
             app/build/outputs/apk/release/*.apk
 
       - name: Release to xposed module repository
         uses: softprops/action-gh-release@v2
+        if: ${{ inputs.publish }}
         with:
           name: ${{ format('BanUninstall_{0}', env.TAG_NAME) }}
           tag_name: ${{ env.TAG_NAME }}
-          draft: true
+          body_path: ${{ github.workspace }}/CHANGELOG.md
           repository: Xposed-Modules-Repo/cn.tinyhai.ban_uninstall
           token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
           files: |
