@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
+import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
 
@@ -73,6 +74,7 @@ object XSharedPrefs {
                 if (intentFilter.hasAction(intent.action) && packageName == BuildConfig.APPLICATION_ID) {
                     LogUtils.log("self package removed")
                     unregisterPrefChangeListener()
+                    TransactService.onSelfRemoved()
                 }
             }
         }, intentFilter)
@@ -105,6 +107,9 @@ object XSharedPrefs {
 
     val isDevMode
         get() = prefs.getBoolean(App.SP_KEY_DEV_MODE, false)
+
+    val isUseBannedList
+        get() = prefs.getBoolean(App.SP_KEY_USE_BANNED_LIST, false)
 
     fun registerPrefsChangeListener(onPrefsChange: () -> Unit) {
         listeners.add(onPrefsChange)

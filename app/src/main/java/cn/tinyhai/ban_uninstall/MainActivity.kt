@@ -1,16 +1,16 @@
 package cn.tinyhai.ban_uninstall
 
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import cn.tinyhai.ban_uninstall.ui.MainScreen
+import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.ui.theme.AppTheme
-import cn.tinyhai.ban_uninstall.utils.TransactorHelper
 import cn.tinyhai.ban_uninstall.vm.MainViewModel
+import com.ramcosta.composedestinations.DestinationsNavHost
+import com.ramcosta.composedestinations.generated.NavGraphs
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<MainViewModel>()
@@ -18,11 +18,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", intent.toString())
-        setupTransactor(intent)
+        TransactClient.init(intent)
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                MainScreen(viewModel = viewModel)
+                DestinationsNavHost(NavGraphs.root)
             }
         }
     }
@@ -35,14 +35,5 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         viewModel.notifyReloadIfNeeded()
-    }
-
-    private fun setupTransactor(intent: Intent) {
-        TransactorHelper.init(intent)
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setupTransactor(intent)
     }
 }

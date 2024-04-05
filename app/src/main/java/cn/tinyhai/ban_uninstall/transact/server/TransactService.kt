@@ -1,0 +1,114 @@
+package cn.tinyhai.ban_uninstall.transact.server
+
+import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.IPackageManager
+import android.content.pm.PackageInfo
+import android.os.Binder
+import android.os.IUserManager
+import android.os.Process
+import android.os.ServiceManager
+import cn.tinyhai.ban_uninstall.transact.ITransactor
+import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
+import cn.tinyhai.ban_uninstall.utils.HandlerUtils
+import cn.tinyhai.ban_uninstall.utils.LogUtils
+import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
+import rikka.parcelablelist.ParcelableListSlice
+
+interface PkgInfoContainer {
+    fun contains(packageName: String, userId: Int): Boolean
+}
+
+object TransactService : ITransactor.Stub(), PkgInfoContainer {
+
+    private val helper = BannedPkgHelper()
+
+    private lateinit var pm: IPackageManager
+    private lateinit var um: IUserManager
+
+    private const val STORE_BANNED_PKG_LIST_DELAY = 30_000L
+    private val storeBannedPkgListJob = Runnable {
+        helper.storeBannedPkgList()
+    }
+
+    fun onSystemBootCompleted() {
+        pm = IPackageManager.Stub.asInterface(ServiceManager.getService("package"))
+        um = IUserManager.Stub.asInterface(ServiceManager.getService(Context.USER_SERVICE))
+        HandlerUtils.postWorker {
+            helper.loadBannedPkgList()
+        }
+    }
+
+    private fun postStoreJob() {
+        HandlerUtils.removeWorkerRunnable(storeBannedPkgListJob)
+        HandlerUtils.postWorkerDelay(storeBannedPkgListJob, STORE_BANNED_PKG_LIST_DELAY)
+    }
+
+    override fun getPackages(): ParcelableListSlice<PackageInfo> {
+        val ident = Binder.clearCallingIdentity()
+        try {
+            val list = arrayListOf<PackageInfo>()
+            val userIds = um.getProfileIds(Process.myUid() / 10_000, true)
+            for (userId in userIds) {
+                pm.getInstalledPackages(0, userId).list.filter {
+                    it.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0
+                }.let {
+                    list.addAll(it)
+                }
+            }
+            return ParcelableListSlice(list)
+        } finally {
+            Binder.restoreCallingIdentity(ident)
+        }
+    }
+
+    override fun banPackage(
+        packageNames: List<String>,
+        bannedPackages: MutableList<String>
+    ) {
+        helper.addPkgs(packageNames, bannedPackages)
+        if (bannedPackages.isNotEmpty()) {
+            bannedPackages.forEach {
+                LogUtils.log("ban pkg $it")
+            }
+            postStoreJob()
+        }
+    }
+
+    override fun freePackage(
+        packageNames: List<String>,
+        freedPackages: MutableList<String>
+    ) {
+        helper.removePkgs(packageNames, freedPackages)
+        if (freedPackages.isNotEmpty()) {
+            freedPackages.forEach {
+                LogUtils.log("free pkg $it")
+            }
+            postStoreJob()
+        }
+    }
+
+    override fun getAllBannedPackages(): List<String> {
+        return helper.allBannedPackages
+    }
+
+    override fun sayHello(hello: String): String {
+        return "$hello from server"
+    }
+
+    override fun onAppLaunched() {
+        XSharedPrefs.registerPrefChangeListener()
+    }
+
+    override fun reloadPrefs() {
+        XSharedPrefs.reload()
+    }
+
+    fun onSelfRemoved() {
+        helper.destroy()
+    }
+
+    override fun contains(packageName: String, userId: Int): Boolean {
+        return helper.allBannedPkgInfo.contains(PkgInfo(packageName, userId))
+    }
+}
