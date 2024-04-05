@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.ksp)
 }
 
 fun String.execute(): String {
@@ -96,11 +97,15 @@ afterEvaluate {
             val apkFile = File(apkPath, apkName)
             doLast {
                 apkFile.renameTo(File(apkPath, newApkName))
-                File(apkPath, "versionCode").bufferedWriter().use {
+                val versionCodeFile = File(apkPath, "versionCode")
+                    .apply { if (!exists()) createNewFile() }
+                versionCodeFile.bufferedWriter().use {
                     it.append(versionCode.toString())
                     it.flush()
                 }
-                File(apkPath, "versionName").bufferedWriter().use {
+                val versionNameFile = File(apkPath, "versionName")
+                    .apply { if (!exists()) createNewFile() }
+                versionNameFile.bufferedWriter().use {
                     it.append(versionName)
                     it.flush()
                 }
@@ -117,10 +122,16 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.composeSettings.ui)
     implementation(libs.composeSettings.ui.extended)
     implementation(libs.dev.rikka.rikkax.parcelablelist)
+    implementation(libs.coil.compose)
+    implementation(libs.compose.destinations.core)
+    implementation(libs.compose.destinations.bottomsheet)
+    implementation("com.github.TinyHai:ComposeDragDrop:jitpack-SNAPSHOT")
+    ksp(libs.compose.destinations.ksp)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

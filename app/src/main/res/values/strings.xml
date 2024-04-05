@@ -1,14 +1,27 @@
 <resources>
     <string name="app_name">禁止卸载</string>
+    <string name="configurations">配置</string>
     <string name="app_description">禁止卸载应用和清除应用数据</string>
+    <string name="app_title_main">@string/app_name</string>
+    <string name="app_title_banned_app_bottom_sheet">禁止的应用</string>
+    <string name="app_title_banned_app_app_bar">未禁止的应用</string>
     <string name="group_title_module_status">模块状态</string>
     <string name="group_title_function">功能配置</string>
+    <string name="group_title_advanced">高级</string>
     <string name="switch_title_ban_uninstall">禁止卸载应用</string>
     <string name="switch_title_ban_clear_data">禁止清除数据</string>
     <string name="switch_title_dev_mode">开发模式</string>
+    <string name="switch_title_use_banned_list">按需禁止</string>
+    <string name="menulink_title_banned_app">配置禁止应用</string>
     <string name="module_status_active">已激活</string>
     <string name="module_status_disable">未激活</string>
     <string name="module_active_mode">运行模式: %1$s</string>
     <string name="icon_description_sync">同步配置给系统</string>
     <string name="icon_description_say_hello">测试消息</string>
+    <string name="text_app_label_dual">(双开)%1$s</string>
+    <string name="text_empty_list">空空如也…</string>
+    <string name="text_drag_target_default">"拖动到此处添加到禁止列表"</string>
+    <string name="text_drag_target_in_bound">松手完成添加</string>
+    <string name="text_select_all">全选</string>
+    <string name="text_cancel">取消</string>
 </resources>

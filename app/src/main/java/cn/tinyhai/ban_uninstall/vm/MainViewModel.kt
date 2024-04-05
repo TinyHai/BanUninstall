@@ -3,10 +3,11 @@ package cn.tinyhai.ban_uninstall.vm
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.widget.Toast
 import androidx.core.content.edit
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cn.tinyhai.ban_uninstall.App
-import cn.tinyhai.ban_uninstall.utils.TransactorHelper
+import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +20,19 @@ data class MainState(
     val banUninstall: Boolean,
     val banClearData: Boolean,
     val devMode: Boolean,
+    val useBannedList: Boolean,
 ) {
     val isActive get() = xpTag.isNotEmpty()
 
     companion object {
         val Empty =
-            MainState(xpTag = "", banUninstall = false, banClearData = false, devMode = false)
+            MainState(
+                xpTag = "",
+                banUninstall = false,
+                banClearData = false,
+                devMode = false,
+                useBannedList = false
+            )
     }
 }
 
@@ -32,7 +40,7 @@ class MainViewModel : ViewModel() {
     private val prefs get() = App.prefs
     private val xpTag get() = App.getXpTag()
 
-    private val helper = TransactorHelper
+    private val client = TransactClient()
 
     private val _state = MutableStateFlow(MainState.Empty)
 
@@ -53,12 +61,14 @@ class MainViewModel : ViewModel() {
             val isBanUninstall = prefs.getBoolean(App.SP_KEY_BAN_UNINSTALL, true)
             val isBanClearData = prefs.getBoolean(App.SP_KEY_BAN_CLEAR_DATA, true)
             val isDevMode = prefs.getBoolean(App.SP_KEY_DEV_MODE, false)
+            val isUseBannedList = prefs.getBoolean(App.SP_KEY_USE_BANNED_LIST, false)
             updateState {
                 it.copy(
                     xpTag = xpTag,
                     banUninstall = isBanUninstall,
                     banClearData = isBanClearData,
-                    devMode = isDevMode
+                    devMode = isDevMode,
+                    useBannedList = isUseBannedList
                 )
             }
         }
@@ -103,16 +113,28 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun onUseBannedList(enabled: Boolean) {
+        if (isActive.not()) {
+            return
+        }
+        val state = state.value
+        onSwitchChange(App.SP_KEY_USE_BANNED_LIST, state.useBannedList, enabled) {
+            it.copy(useBannedList = enabled)
+        }
+    }
+
     fun notifyReloadIfNeeded() {
         if (configChanged) {
             configChanged = false
-            helper.reload()
+            client?.reloadPrefs()
         }
     }
 
     fun sayHello() {
-        helper.sayHello("test").let {
-            Toast.makeText(App.app, it, Toast.LENGTH_SHORT).show()
+        viewModelScope.launch {
+            client?.sayHello("test").let {
+                Toast.makeText(App.app, it, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

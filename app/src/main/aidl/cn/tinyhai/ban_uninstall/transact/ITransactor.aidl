@@ -1,5 +1,5 @@
 // ITransactor.aidl
-package cn.tinyhai.ban_uninstall;
+package cn.tinyhai.ban_uninstall.transact;
 
 import rikka.parcelablelist.ParcelableListSlice;
 
@@ -8,9 +8,9 @@ import rikka.parcelablelist.ParcelableListSlice;
 interface ITransactor {
     ParcelableListSlice<PackageInfo> getPackages();
 
-    boolean banPackage(in List<String> packageNames, out List<String> bannedPackages);
+    void banPackage(in List<String> packageNames, out List<String> bannedPackages);
 
-    boolean freePackage(in List<String> packageNames, out List<String> freedPackages);
+    void freePackage(in List<String> packageNames, out List<String> freedPackages);
 
     List<String> getAllBannedPackages();
 

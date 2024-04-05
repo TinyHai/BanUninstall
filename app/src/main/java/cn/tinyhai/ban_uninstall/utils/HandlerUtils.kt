@@ -38,6 +38,6 @@ object HandlerUtils {
     private val workerHandler by lazy {
         val t = HandlerThread("ban_uninstall_worker")
         t.start()
-        Handler(t.looper)
+        Handler(t.looper).also { it.looper.setMessageLogging { LogUtils.log(it) } }
     }
 }

@@ -1,6 +1,7 @@
-package cn.tinyhai.ban_uninstall.ui
+package cn.tinyhai.ban_uninstall.ui.screen
 
 import android.widget.Toast
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,21 +21,28 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.PopupPositionProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.tinyhai.ban_uninstall.R
 import cn.tinyhai.ban_uninstall.vm.MainState
 import cn.tinyhai.ban_uninstall.vm.MainViewModel
 import com.alorma.compose.settings.ui.SettingsGroup
 import com.alorma.compose.settings.ui.SettingsMenuLink
 import com.alorma.compose.settings.ui.SettingsSwitch
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.annotation.RootGraph
+import com.ramcosta.composedestinations.generated.destinations.BannedAppScreenDestination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Destination<RootGraph>(start = true)
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(navigator: DestinationsNavigator) {
+    val viewModel: MainViewModel = viewModel()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(id = R.string.app_name)) },
+                title = { Text(text = stringResource(id = R.string.app_title_main)) },
                 actions = {
                     TooltipBox(
                         positionProvider = rememberTooltipPositionProvider(),
@@ -88,6 +96,8 @@ fun MainScreen(viewModel: MainViewModel) {
             onBanUninstall = viewModel::onBanUninstall,
             onBanClearData = viewModel::onBanClearData,
             onDevMode = viewModel::onDevMode,
+            onUseBannedList = viewModel::onUseBannedList,
+            gotoBannedApp = { navigator.navigate(BannedAppScreenDestination()) },
             modifier = Modifier
                 .padding(it),
             state = state,
@@ -100,6 +110,8 @@ private fun MainScreenContent(
     onBanUninstall: (Boolean) -> Unit,
     onBanClearData: (Boolean) -> Unit,
     onDevMode: (Boolean) -> Unit,
+    onUseBannedList: (Boolean) -> Unit,
+    gotoBannedApp: () -> Unit,
     modifier: Modifier = Modifier,
     state: MainState
 ) {
@@ -124,7 +136,12 @@ private fun MainScreenContent(
                 },
                 subtitle = {
                     if (state.isActive) {
-                        Text(text = stringResource(id = R.string.module_active_mode).format(state.xpTag))
+                        Text(
+                            text = stringResource(
+                                id = R.string.module_active_mode,
+                                state.xpTag
+                            ).format()
+                        )
                     }
                 }
             ) {
@@ -156,6 +173,28 @@ private fun MainScreenContent(
                 title = { Text(text = stringResource(R.string.switch_title_dev_mode)) },
             ) {
                 onDevMode(it)
+            }
+        }
+        SettingsGroup(
+            title = {
+                Text(text = stringResource(R.string.group_title_advanced))
+            }
+        ) {
+            SettingsSwitch(
+                state = state.useBannedList,
+                enabled = state.isActive,
+                title = { Text(text = stringResource(R.string.switch_title_use_banned_list)) },
+            ) {
+                onUseBannedList(it)
+            }
+            AnimatedVisibility(
+                state.useBannedList,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                SettingsMenuLink(title = { Text(text = stringResource(R.string.menulink_title_banned_app)) }) {
+                    gotoBannedApp()
+                }
             }
         }
     }

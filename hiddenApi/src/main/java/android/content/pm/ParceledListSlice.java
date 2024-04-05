@@ -3,8 +3,6 @@ package android.content.pm;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import androidx.annotation.NonNull;
-
 public class ParceledListSlice<T extends Parcelable> extends BaseParceledListSlice<T>  {
 
     @Override
@@ -13,7 +11,7 @@ public class ParceledListSlice<T extends Parcelable> extends BaseParceledListSli
     }
 
     @Override
-    public void writeToParcel(@NonNull Parcel dest, int flags) {
+    public void writeToParcel(Parcel dest, int flags) {
         throw new UnsupportedOperationException();
     }
 }
