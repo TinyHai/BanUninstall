@@ -39,59 +39,61 @@ import kotlin.math.roundToInt
 @Composable
 fun MainScreen(navigator: DestinationsNavigator) {
     val viewModel: MainViewModel = viewModel()
+    val state by viewModel.state.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(id = R.string.app_title_main)) },
                 actions = {
-                    TooltipBox(
-                        positionProvider = rememberTooltipPositionProvider(),
-                        tooltip = {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(4.dp),
-                            ) {
-                                Text(text = stringResource(R.string.icon_description_say_hello))
-                            }
-                        },
-                        state = rememberTooltipState()
-                    ) {
-                        IconButton(onClick = { viewModel.sayHello() }) {
-                            Icon(
-                                Icons.Outlined.Sms,
-                                contentDescription = stringResource(R.string.icon_description_sync)
-                            )
-                        }
-                    }
-                    TooltipBox(
-                        positionProvider = rememberTooltipPositionProvider(),
-                        tooltip = {
-                            Surface(
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(4.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.icon_description_sync),
-                                    modifier = Modifier.padding(4.dp)
+                    if (state.isActive) {
+                        TooltipBox(
+                            positionProvider = rememberTooltipPositionProvider(),
+                            tooltip = {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(4.dp),
+                                ) {
+                                    Text(text = stringResource(R.string.icon_description_say_hello))
+                                }
+                            },
+                            state = rememberTooltipState()
+                        ) {
+                            IconButton(onClick = { viewModel.sayHello() }) {
+                                Icon(
+                                    Icons.Outlined.Sms,
+                                    contentDescription = stringResource(R.string.icon_description_sync)
                                 )
                             }
-                        },
-                        state = rememberTooltipState()
-                    ) {
-                        IconButton(
-                            onClick = { viewModel.notifyReloadIfNeeded() }
+                        }
+                        TooltipBox(
+                            positionProvider = rememberTooltipPositionProvider(),
+                            tooltip = {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(4.dp),
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.icon_description_sync),
+                                        modifier = Modifier.padding(4.dp)
+                                    )
+                                }
+                            },
+                            state = rememberTooltipState()
                         ) {
-                            Icon(
-                                Icons.Outlined.Sync,
-                                contentDescription = stringResource(R.string.icon_description_sync)
-                            )
+                            IconButton(
+                                onClick = { viewModel.notifyReloadIfNeeded() }
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Sync,
+                                    contentDescription = stringResource(R.string.icon_description_sync)
+                                )
+                            }
                         }
                     }
                 }
             )
         }
     ) {
-        val state by viewModel.state.collectAsState()
         MainScreenContent(
             onBanUninstall = viewModel::onBanUninstall,
             onBanClearData = viewModel::onBanClearData,

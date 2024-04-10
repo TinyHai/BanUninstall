@@ -15,6 +15,11 @@ class HookSelf : BaseOneshotHooker() {
         get() = "HookSelf"
 
     override fun createOneshotHook(lp: XC_LoadPackage.LoadPackageParam) {
+        val userId = lp.appInfo.uid / 100_000
+        if (userId > 0) {
+            LogUtils.log("skip dual app")
+            return
+        }
         val xpTag = try {
             val tag = XposedBridge::class.java.getDeclaredField("TAG").get(null)?.toString()
             when (tag) {
@@ -47,7 +52,7 @@ class HookSelf : BaseOneshotHooker() {
                                 dir.mkdir()
                             }
                             val prev = Os.umask("777".toInt(8))
-                            LogUtils.log(prev.toString(8))
+                            LogUtils.log("prev umask: ${prev.toString(8).padStart(4, '0')}")
                             Os.chmod(dir.absolutePath, "715".toInt(8))
                             Os.umask(prev)
                             LogUtils.log("set prefs dir world readable success")

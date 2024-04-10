@@ -10,11 +10,25 @@ interface Hooker {
     val name: String
     val targetPackageName: String
     val targetProcessName: String?
+
+    fun isInterest(lp: LoadPackageParam): Boolean {
+        return lp.packageName == targetPackageName && (targetProcessName == null || lp.processName == targetProcessName)
+    }
+
+    fun init(lp: LoadPackageParam)
+    fun startHook(lp: LoadPackageParam)
+
+    fun runCatchingWithLog(block: () -> Unit) {
+        runCatching(block).onFailure {
+            LogUtils.log("$name error")
+            LogUtils.log(it)
+        }.onSuccess {
+            LogUtils.log("$name success")
+        }
+    }
 }
 
 interface UnhookableHooker : Hooker {
-    fun init(lp: LoadPackageParam)
-    fun startHook(lp: LoadPackageParam)
     fun unhook()
 }
 
@@ -32,7 +46,7 @@ interface HookerHelper {
             }
         }
         if (hooker == null) {
-            LogUtils.log("hook $methodName failed")
+            LogUtils.log("hook $methodName failed !!!!!")
         }
         return hooker
     }
@@ -43,50 +57,64 @@ interface HookerHelper {
         val clazz = classLoader.loadClass(className)
         return findAndHookFirst(clazz, methodName, callback)
     }
+
+    fun MutableList<Unhook>.findAndAddHook(
+        clazz: Class<*>,
+        methodName: String,
+        callback: XC_MethodHook
+    ) {
+        findAndHookFirst(clazz, methodName, callback)?.also { add(it) }
+    }
 }
 
 abstract class BaseOneshotHooker : OneshotHooker, HookerHelper {
 
+    private var hooked = false
+
+    override fun init(lp: LoadPackageParam) {}
+
+    override fun startHook(lp: LoadPackageParam) {
+        startOneshotHook(lp)
+    }
+
     override fun startOneshotHook(lp: LoadPackageParam) {
+        if (hooked || !isInterest(lp)) {
+            return
+        }
+        hooked = true
         runCatchingWithLog {
+            LogUtils.log("startOneshotHook >>>>")
             createOneshotHook(lp)
+            LogUtils.log("startOneshotHook <<<<")
         }
     }
 
     abstract fun createOneshotHook(lp: LoadPackageParam)
-
-    private inline fun runCatchingWithLog(block: () -> Unit) {
-        runCatching(block).onFailure {
-            LogUtils.log("$name error")
-            LogUtils.log(it)
-        }.onSuccess {
-            LogUtils.log("$name success")
-        }
-    }
 }
 
-abstract class BaseUnhookableHooker : UnhookableHooker, OneshotHooker, HookerHelper {
+abstract class BaseUnhookableHooker : OneshotHooker, UnhookableHooker, HookerHelper {
 
     private val unhooks: ArrayList<Unhook> = ArrayList()
 
+    override fun init(lp: LoadPackageParam) {}
+
     override fun startHook(lp: LoadPackageParam) {
+        if (!isInterest(lp)) {
+            return
+        }
         runCatchingWithLog {
             unhooks.addAll(createHooks(lp))
         }
     }
 
-    private inline fun runCatchingWithLog(block: () -> Unit) {
-        runCatching(block).onFailure {
-            LogUtils.log("$name error")
-            LogUtils.log(it)
-        }.onSuccess {
-            LogUtils.log("$name success")
-        }
-    }
-
     override fun startOneshotHook(lp: LoadPackageParam) {
+        if (!isInterest(lp)) {
+            return
+        }
         runCatchingWithLog {
+            LogUtils.log("startOneshotHook >>>>")
             createOneshotHook(lp)
+            LogUtils.log("startOneshotHook <<<<")
         }
     }
 

@@ -93,9 +93,13 @@ class TransactClient(
             return packageName == BuildConfig.APPLICATION_ID && className == MainActivity::class.qualifiedName
         }
 
-        fun injectBinderIfNeeded(remote: ITransactor.Stub, intent: Intent) {
+        fun injectBinderIfNeeded(remote: ITransactor.Stub, intent: Intent, userId: Int) {
             val component = intent.component ?: return
             if (component.isSelf()) {
+                if (userId > 0) {
+                    LogUtils.log("inject skip dual app")
+                    return
+                }
                 val bundle = Bundle().apply {
                     putBinder(KEY_CLIENT, remote.asBinder())
                 }
