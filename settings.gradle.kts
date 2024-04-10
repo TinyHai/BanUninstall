@@ -21,6 +21,7 @@ dependencyResolutionManagement {
     }
 }
 
+
 rootProject.name = "BanUninstall"
 include(":app")
 include(":hiddenApi")

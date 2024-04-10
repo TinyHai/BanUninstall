@@ -33,8 +33,8 @@ android {
         applicationId = "cn.tinyhai.ban_uninstall"
         minSdk = 21
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -131,7 +131,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.compose.destinations.core)
     implementation(libs.compose.destinations.bottomsheet)
-    implementation("com.github.TinyHai:ComposeDragDrop:jitpack-SNAPSHOT")
+    implementation("com.github.TinyHai:ComposeDragDrop:dev-SNAPSHOT")
     ksp(libs.compose.destinations.ksp)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.IPackageManager
 import android.content.pm.PackageInfo
+import android.content.pm.PackageManager.NameNotFoundException
 import android.os.Binder
 import android.os.IUserManager
 import android.os.Process
@@ -36,6 +37,17 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         um = IUserManager.Stub.asInterface(ServiceManager.getService(Context.USER_SERVICE))
         HandlerUtils.postWorker {
             helper.loadBannedPkgList()
+            trimBannedPkgInfo {
+                try {
+                    pm.getPackageInfo(it.packageName, 0, it.userId)
+                    false
+                } catch (e: NameNotFoundException) {
+                    true
+                } catch (th: Throwable) {
+                    LogUtils.log(th)
+                    true
+                }
+            }
         }
     }
 
@@ -48,7 +60,7 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         val ident = Binder.clearCallingIdentity()
         try {
             val list = arrayListOf<PackageInfo>()
-            val userIds = um.getProfileIds(Process.myUid() / 10_000, true)
+            val userIds = um.getProfileIds(Process.myUid() / 100_000, true)
             for (userId in userIds) {
                 pm.getInstalledPackages(0, userId).list.filter {
                     it.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0
@@ -104,11 +116,37 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         XSharedPrefs.reload()
     }
 
+    override fun contains(packageName: String, userId: Int): Boolean {
+        return helper.allBannedPkgInfo.contains(PkgInfo(packageName, userId))
+    }
+
     fun onSelfRemoved() {
         helper.destroy()
     }
 
-    override fun contains(packageName: String, userId: Int): Boolean {
-        return helper.allBannedPkgInfo.contains(PkgInfo(packageName, userId))
+    fun onPkgUninstall(packageName: String, userId: Int) {
+        val removed = mutableListOf<String>()
+        helper.removePkgs(listOf(PkgInfo(packageName, userId).toString()), removed)
+        if (removed.isNotEmpty()) {
+            LogUtils.log("onPkgUninstall")
+            removed.forEach {
+                LogUtils.log(it)
+            }
+            postStoreJob()
+        }
+    }
+
+    private fun trimBannedPkgInfo(predicate: (PkgInfo) -> Boolean) {
+        val allPkgInfo = helper.allBannedPkgInfo
+        val trimmed = allPkgInfo.filter(predicate)
+        val removed = mutableListOf<String>()
+        helper.removePkgs(trimmed.map { it.toString() }, removed)
+        if (removed.isNotEmpty()) {
+            LogUtils.log("trim bannedPkgInfo")
+            removed.forEach {
+                LogUtils.log(it)
+            }
+            postStoreJob()
+        }
     }
 }

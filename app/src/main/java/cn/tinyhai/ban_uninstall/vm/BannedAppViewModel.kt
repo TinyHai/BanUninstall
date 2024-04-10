@@ -43,7 +43,7 @@ data class BannedAppState(
                     labelPinyin.contains(queryPinyin)
                         || it.pkgInfo.packageName.lowercase().contains(queryLower)
                 }
-            }
+            }.sortedWith(comparator)
         }
     val bannedAppInfos: List<AppInfo>
         get() {
@@ -57,7 +57,7 @@ data class BannedAppState(
                     labelPinyin.contains(queryPinyin)
                         || it.pkgInfo.packageName.lowercase().contains(queryLower)
                 }
-            }
+            }.sortedWith(comparator)
         }
 
     companion object {
@@ -69,6 +69,16 @@ data class BannedAppState(
             selectedInBanned = emptyList(),
             query = ""
         )
+
+        private val comparator: Comparator<AppInfo> by lazy {
+            compareBy<AppInfo> {
+                HanziToPinyin.getInstance().toPinyin(it.label)
+            } then compareBy {
+                it.pkgInfo.packageName
+            } then compareBy {
+                it.isDual
+            }
+        }
     }
 }
 
@@ -88,16 +98,6 @@ class BannedAppViewModel : ViewModel() {
         _state.value = updater(state.value)
     }
 
-    private val comparator: Comparator<AppInfo> by lazy {
-        compareBy<AppInfo> {
-            HanziToPinyin.getInstance().toPinyin(it.label)
-        } then compareBy {
-            it.pkgInfo.packageName
-        } then compareBy {
-            it.isDual
-        }
-    }
-
     fun refresh() {
         viewModelScope.launch {
             updateState { it.copy(isRefreshing = true) }
@@ -109,7 +109,7 @@ class BannedAppViewModel : ViewModel() {
                     val icon = it.applicationInfo.loadIcon(pm)
                     val packageName = it.packageName ?: it.applicationInfo.packageName
                     val uid = it.applicationInfo.uid
-                    AppInfo(label, icon, PkgInfo(packageName, uid / 10_000))
+                    AppInfo(label, icon, PkgInfo(packageName, uid / 100_000))
                 }
                 val bannedPkgInfos = client?.fetchAllBannedPackages() ?: emptyList()
                 val bannedAppInfos = ArrayList<AppInfo>()
@@ -124,8 +124,8 @@ class BannedAppViewModel : ViewModel() {
                 updateState {
                     it.copy(
                         isRefreshing = false,
-                        originFreedAppInfos = freedPkgInfos.sortedWith(comparator),
-                        originBannedAppInfos = bannedAppInfos.sortedWith(comparator),
+                        originFreedAppInfos = freedPkgInfos,
+                        originBannedAppInfos = bannedAppInfos,
                         selectedInFreed = emptyList(),
                         selectedInBanned = emptyList(),
                         query = ""
@@ -159,7 +159,7 @@ class BannedAppViewModel : ViewModel() {
     fun onFreePkgs(pkgInfos: List<PkgInfo>) {
         val client = client ?: return
         viewModelScope.launch {
-            val freed = client.banPackage(pkgInfos)
+            val freed = client.freePackage(pkgInfos)
             if (freed.isEmpty()) {
                 return@launch
             }
@@ -197,9 +197,27 @@ class BannedAppViewModel : ViewModel() {
         }
     }
 
+    fun onFreeSelectedBanned() {
+        val selectedInBanned = state.value.selectedInBanned.map { it.pkgInfo }
+        onFreePkgs(selectedInBanned)
+        clearSelected()
+    }
+
+    fun onBanSelectedFreed() {
+        val selectedInFreed = state.value.selectedInFreed.map { it.pkgInfo }
+        onBanPkgs(selectedInFreed)
+        clearSelected()
+    }
+
     fun onBannedSelectAll() {
         updateState {
             it.copy(selectedInBanned = it.bannedAppInfos)
+        }
+    }
+
+    fun clearSelected() {
+        updateState {
+            it.copy(selectedInFreed = emptyList(), selectedInBanned = emptyList())
         }
     }
 
@@ -223,12 +241,6 @@ class BannedAppViewModel : ViewModel() {
 
     fun onSearchClear() {
         updateState { it.copy(query = "") }
-    }
-
-    fun clearSelected() {
-        updateState {
-            it.copy(selectedInFreed = emptyList(), selectedInBanned = emptyList())
-        }
     }
 
     private fun MutableList<AppInfo>.moveTo(

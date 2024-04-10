@@ -9,6 +9,7 @@ import androidx.activity.viewModels
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.ui.theme.AppTheme
 import cn.tinyhai.ban_uninstall.vm.MainViewModel
+import cn.tinyhai.compose.dragdrop.AnimatedDragDropBox
 import com.ramcosta.composedestinations.DestinationsNavHost
 import com.ramcosta.composedestinations.generated.NavGraphs
 
@@ -22,7 +23,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                DestinationsNavHost(NavGraphs.root)
+                AnimatedDragDropBox(
+                    scale = 1.5f,
+                    alpha = 0.6f
+                ) {
+                    DestinationsNavHost(NavGraphs.root)
+                }
             }
         }
     }

@@ -3,7 +3,6 @@ package cn.tinyhai.ban_uninstall.vm
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.widget.Toast
 import androidx.core.content.edit
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cn.tinyhai.ban_uninstall.App
@@ -94,7 +93,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun onBanClearData(enabled: Boolean) {
-        if (isActive.not() || !state.value.banUninstall) {
+        if (isActive.not()) {
             return
         }
         val state = state.value
@@ -132,7 +131,7 @@ class MainViewModel : ViewModel() {
 
     fun sayHello() {
         viewModelScope.launch {
-            client?.sayHello("test").let {
+            client?.sayHello("test")?.let {
                 Toast.makeText(App.app, it, Toast.LENGTH_SHORT).show()
             }
         }

@@ -19,10 +19,12 @@
     <string name="menulink_title_banned_app">Config banned apps</string>
     <string name="text_app_label_dual">(Dual)%1$s</string>
     <string name="text_empty_list">Nothing here…</string>
-    <string name="text_drag_target_default">Drag to here to add it into banned list</string>
-    <string name="text_drag_target_in_bound">Release to finish adding</string>
+    <string name="text_drag_target_add_default">Drag to here to add it into banned list</string>
+    <string name="text_drag_target_add_in_bound">Release to finish adding</string>
     <string name="switch_title_use_banned_list">Ban on demand</string>
     <string name="group_title_advanced">Advanced</string>
     <string name="text_select_all">All</string>
     <string name="text_cancel">Cancel</string>
+    <string name="text_drag_target_remove_default">Drag to here to remove it from banned list</string>
+    <string name="text_drag_target_remove_in_bound">Release to finish removing</string>
 </resources>

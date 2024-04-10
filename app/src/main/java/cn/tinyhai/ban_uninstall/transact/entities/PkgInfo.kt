@@ -13,7 +13,7 @@ data class PkgInfo(
                     endIndex = splitCharIndex
                 ) to packageNameWithUserId.substring(splitCharIndex + 1).toInt()
             } else {
-                packageNameWithUserId to 1 // only contains user app
+                throw IllegalArgumentException("packageNameWithUserId: $packageNameWithUserId userId not found")
             }
             return PkgInfo(packageName, userId)
         }

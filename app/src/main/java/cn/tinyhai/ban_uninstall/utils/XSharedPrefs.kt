@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
+import android.os.Handler
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
@@ -45,7 +46,6 @@ object XSharedPrefs {
 
     fun init() {
         val xpVersion = XposedBridge.getXposedVersion()
-        LogUtils.log("xp version = $xpVersion")
         prefs = XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
         if (xpVersion >= 93) {
             registerPrefChangeListener()
@@ -62,22 +62,57 @@ object XSharedPrefs {
             )
     }
 
+    private val registerReceiverForAllUsers by lazy {
+        try {
+            Context::class.java.getDeclaredMethod(
+                "registerReceiverForAllUsers",
+                BroadcastReceiver::class.java,
+                IntentFilter::class.java,
+                String::class.java,
+                Handler::class.java
+            )
+        } catch (e: NoSuchMethodException) {
+            null
+        }
+    }
+
     fun listenSelfRemoved(context: Context) {
         LogUtils.log("listenSelfRemoved")
         val intentFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
             addDataScheme("package")
         }
-        context.registerReceiver(object : BroadcastReceiver() {
+        val receiver = object : BroadcastReceiver() {
+            private val getSendingUserId by lazy {
+                BroadcastReceiver::class.java.getDeclaredMethod("getSendingUserId")
+                    .also { it.isAccessible = true }
+            }
+
             override fun onReceive(context: Context, intent: Intent) {
-                val packageName = intent.data?.encodedSchemeSpecificPart
-                if (intentFilter.hasAction(intent.action) && packageName == BuildConfig.APPLICATION_ID) {
+                val sendingUserId = getSendingUserId.invoke(this) as Int
+                val uri = intent.data
+                val packageName = uri?.encodedSchemeSpecificPart
+                LogUtils.log("pkg uninstall uri = $uri, userId = $sendingUserId")
+                packageName?.let {
+                    TransactService.onPkgUninstall(packageName, sendingUserId)
+                }
+                if (intentFilter.hasAction(intent.action) && sendingUserId == 0 && packageName == BuildConfig.APPLICATION_ID) {
                     LogUtils.log("self package removed")
                     unregisterPrefChangeListener()
                     TransactService.onSelfRemoved()
                 }
             }
-        }, intentFilter)
+        }
+        registerReceiverForAllUsers?.let {
+            it.invoke(
+                context,
+                receiver,
+                intentFilter,
+                null,
+                null
+            )
+            Unit
+        } ?: context.registerReceiver(receiver, intentFilter)
     }
 
     fun registerPrefChangeListener() {

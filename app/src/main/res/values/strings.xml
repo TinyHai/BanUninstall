@@ -20,8 +20,10 @@
     <string name="icon_description_say_hello">测试消息</string>
     <string name="text_app_label_dual">(双开)%1$s</string>
     <string name="text_empty_list">空空如也…</string>
-    <string name="text_drag_target_default">"拖动到此处添加到禁止列表"</string>
-    <string name="text_drag_target_in_bound">松手完成添加</string>
+    <string name="text_drag_target_add_default">"拖动到此处添加到禁止列表"</string>
+    <string name="text_drag_target_add_in_bound">松手完成添加</string>
+    <string name="text_drag_target_remove_default">拖动到此处移出禁止列表</string>
+    <string name="text_drag_target_remove_in_bound">松手完成移出</string>
     <string name="text_select_all">全选</string>
     <string name="text_cancel">取消</string>
 </resources>
