@@ -76,105 +76,112 @@ fun BannedAppScreen(navigator: DestinationsNavigator) {
         }
     }
 
-    BottomSheetScaffold(
-        sheetContent = {
-            BannedAppGrid(
-                isBottomSheetExpended = isBottomSheetExpended,
-                onAppClick = {
-                    viewModel.onBannedAppClick(it)
-                },
-                onFreePkg = { viewModel.onFreePkgs(listOf(it)) },
-                onSelectAllBannedApp = { viewModel.onBannedSelectAll() },
-                onFreeSelected = { viewModel.onFreeSelectedBanned() },
-                onClearAllBannedApp = { viewModel.clearSelected() },
-                bannedApps = state.bannedAppInfos,
-                selectedApps = state.selectedInBanned,
-                contentPadding = PaddingValues(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(0.7f)
-            )
-        },
-        topBar = {
-            SearchAppBar(
-                title = { Text(text = stringResource(id = R.string.app_title_banned_app_app_bar)) },
-                searchText = state.query,
-                onSearchTextChange = viewModel::onQueryChange,
-                onSearchStart = { viewModel.clearSelected() },
-                onClearClick = viewModel::onSearchClear,
-                onBackClick = { navigator.navigateUp() }
-            )
-            TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = { navigator.navigateUp() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "navigationUp"
-                        )
-                    }
-                },
-                title = { Text(text = stringResource(id = R.string.app_title_banned_app_app_bar)) },
-            )
-        },
-        scaffoldState = scaffoldState
+    Box(
+        modifier = Modifier
+            .navigationBarsPadding()
+            .fillMaxSize()
+            .clipToBounds(),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(it),
-        ) {
-            val functionBarSize = DpSize(300.dp, 56.dp)
-            val functionBarBottomPadding = 12.dp
-            val showFunctionBar = state.selectedInFreed.isNotEmpty()
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                FreedAppGrid(
-                    isRefreshing = state.isRefreshing,
+        BottomSheetScaffold(
+            sheetContent = {
+                BannedAppGrid(
                     isBottomSheetExpended = isBottomSheetExpended,
-                    onRefreshing = { viewModel.refresh() },
                     onAppClick = {
-                        viewModel.onFreedAppClick(it)
+                        viewModel.onBannedAppClick(it)
                     },
-                    freedApps = state.freedAppInfos,
-                    selectedApps = state.selectedInFreed,
-                    contentPadding = if (showFunctionBar) PaddingValues(
-                        8.dp,
-                        8.dp,
-                        8.dp,
-                        8.dp + functionBarSize.height + functionBarBottomPadding
-                    ) else PaddingValues(8.dp),
+                    onFreePkg = { viewModel.onFreePkgs(listOf(it)) },
+                    onSelectAllBannedApp = { viewModel.onBannedSelectAll() },
+                    onFreeSelected = { viewModel.onFreeSelectedBanned() },
+                    onClearAllBannedApp = { viewModel.clearSelected() },
+                    bannedApps = state.bannedAppInfos,
+                    selectedApps = state.selectedInBanned,
+                    contentPadding = PaddingValues(8.dp),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .fillMaxHeight(0.618f)
                 )
-            }
-
-            if (!isBottomSheetExpended) {
-                DropToBanPkgBox(
-                    onBanPkg = { viewModel.onBanPkgs(listOf(it)) },
-                    modifier = Modifier.align(Alignment.BottomCenter)
+            },
+            topBar = {
+                SearchAppBar(
+                    title = { Text(text = stringResource(id = R.string.app_title_banned_app_app_bar)) },
+                    searchText = state.query,
+                    onSearchTextChange = viewModel::onQueryChange,
+                    onSearchStart = { viewModel.clearSelected() },
+                    onClearClick = viewModel::onSearchClear,
+                    onBackClick = { navigator.navigateUp() }
                 )
-            }
-
-            AnimatedVisibility(
-                showFunctionBar,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.BottomCenter)
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { navigator.navigateUp() }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "navigationUp"
+                            )
+                        }
+                    },
+                    title = { Text(text = stringResource(id = R.string.app_title_banned_app_app_bar)) },
+                )
+            },
+            scaffoldState = scaffoldState,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(it),
             ) {
-                MultipleSelectBar(
-                    selectAll = { viewModel.onFreedSelectAll() },
-                    performIcon = Icons.Default.Add,
-                    onPerform = { viewModel.onBanSelectedFreed() },
-                    clearAll = { viewModel.clearSelected() },
+                val functionBarSize = DpSize(300.dp, 56.dp)
+                val functionBarBottomPadding = 12.dp
+                val showFunctionBar = state.selectedInFreed.isNotEmpty()
+                Surface(
                     modifier = Modifier
-                        .padding(bottom = 12.dp)
-                        .shadow(4.dp, shape = RoundedCornerShape(50))
-                        .width(300.dp)
-                        .height(56.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                )
+                        .fillMaxSize()
+                ) {
+                    FreedAppGrid(
+                        isRefreshing = state.isRefreshing,
+                        isBottomSheetExpended = isBottomSheetExpended,
+                        onRefreshing = { viewModel.refresh() },
+                        onAppClick = {
+                            viewModel.onFreedAppClick(it)
+                        },
+                        freedApps = state.freedAppInfos,
+                        selectedApps = state.selectedInFreed,
+                        contentPadding = if (showFunctionBar) PaddingValues(
+                            8.dp,
+                            8.dp,
+                            8.dp,
+                            8.dp + functionBarSize.height + functionBarBottomPadding
+                        ) else PaddingValues(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    )
+                }
+
+                if (!isBottomSheetExpended) {
+                    DropToBanPkgBox(
+                        onBanPkg = { viewModel.onBanPkgs(listOf(it)) },
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+                }
+
+                AnimatedVisibility(
+                    showFunctionBar,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    MultipleSelectBar(
+                        selectAll = { viewModel.onFreedSelectAll() },
+                        performIcon = Icons.Default.Add,
+                        onPerform = { viewModel.onBanSelectedFreed() },
+                        clearAll = { viewModel.clearSelected() },
+                        modifier = Modifier
+                            .padding(bottom = 12.dp)
+                            .shadow(4.dp, shape = RoundedCornerShape(50))
+                            .width(300.dp)
+                            .height(56.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                    )
+                }
             }
         }
     }
@@ -399,6 +406,7 @@ private fun BannedAppGrid(
 ) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         val topBarType = when {
+            !isBottomSheetExpended -> TopBarType.Normal
             LocalDragDrop.current.isDragging -> TopBarType.Dragging
             selectedApps.isNotEmpty() -> TopBarType.MultipleSelect
             else -> TopBarType.Normal
@@ -411,7 +419,7 @@ private fun BannedAppGrid(
             onClearAll = onClearAllBannedApp,
             modifier = Modifier.height(72.dp)
         )
-        Box(modifier = modifier) {
+        Box {
             LazyVerticalGrid(
                 GridCells.Fixed(3),
                 contentPadding = contentPadding,
