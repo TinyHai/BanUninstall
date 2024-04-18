@@ -12,7 +12,7 @@ import android.os.ServiceManager
 import cn.tinyhai.ban_uninstall.transact.ITransactor
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.utils.HandlerUtils
-import cn.tinyhai.ban_uninstall.utils.LogUtils
+import cn.tinyhai.ban_uninstall.utils.XPLogUtils
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
 import rikka.parcelablelist.ParcelableListSlice
 
@@ -44,7 +44,7 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
                 } catch (e: NameNotFoundException) {
                     true
                 } catch (th: Throwable) {
-                    LogUtils.log(th)
+                    XPLogUtils.log(th)
                     true
                 }
             }
@@ -81,7 +81,7 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         helper.addPkgs(packageNames, bannedPackages)
         if (bannedPackages.isNotEmpty()) {
             bannedPackages.forEach {
-                LogUtils.log("ban pkg $it")
+                XPLogUtils.log("ban pkg $it")
             }
             postStoreJob()
         }
@@ -94,7 +94,7 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         helper.removePkgs(packageNames, freedPackages)
         if (freedPackages.isNotEmpty()) {
             freedPackages.forEach {
-                LogUtils.log("free pkg $it")
+                XPLogUtils.log("free pkg $it")
             }
             postStoreJob()
         }
@@ -128,9 +128,9 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         val removed = mutableListOf<String>()
         helper.removePkgs(listOf(PkgInfo(packageName, userId).toString()), removed)
         if (removed.isNotEmpty()) {
-            LogUtils.log("onPkgUninstall")
+            XPLogUtils.log("onPkgUninstall")
             removed.forEach {
-                LogUtils.log(it)
+                XPLogUtils.log(it)
             }
             postStoreJob()
         }
@@ -142,9 +142,9 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         val removed = mutableListOf<String>()
         helper.removePkgs(trimmed.map { it.toString() }, removed)
         if (removed.isNotEmpty()) {
-            LogUtils.log("trim bannedPkgInfo")
+            XPLogUtils.log("trim bannedPkgInfo")
             removed.forEach {
-                LogUtils.log(it)
+                XPLogUtils.log(it)
             }
             postStoreJob()
         }

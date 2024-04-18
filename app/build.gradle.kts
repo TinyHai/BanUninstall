@@ -40,6 +40,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -132,6 +135,8 @@ dependencies {
     implementation(libs.compose.destinations.core)
     implementation(libs.compose.destinations.bottomsheet)
     implementation("com.github.TinyHai:ComposeDragDrop:dev-SNAPSHOT")
+    implementation(project(":hook"))
+    ksp(project(":processor"))
     ksp(libs.compose.destinations.ksp)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

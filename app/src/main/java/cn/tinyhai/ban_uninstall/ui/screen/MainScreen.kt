@@ -2,26 +2,28 @@ package cn.tinyhai.ban_uninstall.ui.screen
 
 import android.widget.Toast
 import androidx.compose.animation.*
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.withResumed
 import cn.tinyhai.ban_uninstall.R
 import cn.tinyhai.ban_uninstall.vm.MainState
 import cn.tinyhai.ban_uninstall.vm.MainViewModel
@@ -39,6 +41,12 @@ import kotlin.math.roundToInt
 @Composable
 fun MainScreen(navigator: DestinationsNavigator) {
     val viewModel: MainViewModel = viewModel()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner, viewModel) {
+        lifecycleOwner.withResumed {
+            viewModel.notifyReloadIfNeeded()
+        }
+    }
     val state by viewModel.state.collectAsState()
     Scaffold(
         topBar = {
@@ -101,6 +109,7 @@ fun MainScreen(navigator: DestinationsNavigator) {
             onUseBannedList = viewModel::onUseBannedList,
             gotoBannedApp = { navigator.navigate(BannedAppScreenDestination()) },
             modifier = Modifier
+                .verticalScroll(rememberScrollState())
                 .padding(it),
             state = state,
         )
@@ -190,7 +199,7 @@ private fun MainScreenContent(
                 onUseBannedList(it)
             }
             AnimatedVisibility(
-                state.useBannedList,
+                state.isActive && state.useBannedList,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {

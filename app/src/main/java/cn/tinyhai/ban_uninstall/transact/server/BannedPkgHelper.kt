@@ -2,7 +2,7 @@ package cn.tinyhai.ban_uninstall.transact.server
 
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
-import cn.tinyhai.ban_uninstall.utils.LogUtils
+import cn.tinyhai.ban_uninstall.utils.XPLogUtils
 import java.io.File
 
 
@@ -12,14 +12,12 @@ class BannedPkgHelper {
         private const val BANNED_PKG_LIST = "$CONFIG_PATH/banned_pkg_list"
     }
 
-    private val bannedPkgListFile by lazy {
-        File(BANNED_PKG_LIST).apply {
+    private val ioLock = Any()
+
+    private val bannedPkgListFile: File
+        get() = File(BANNED_PKG_LIST).apply {
             parentFile?.mkdirs()
-            if (!exists()) {
-                createNewFile()
-            }
         }
-    }
 
     private val bakFile by lazy {
         File(bannedPkgListFile.absolutePath + ".bak")
@@ -39,7 +37,7 @@ class BannedPkgHelper {
 
     fun loadBannedPkgList() {
         val hashSet = HashSet<PkgInfo>()
-        synchronized(bannedPkgListFile) {
+        synchronized(ioLock) {
             runCatching {
                 bannedPkgListFile.bufferedReader().use {
                     it.forEachLine { pkgWithUserId ->
@@ -49,9 +47,9 @@ class BannedPkgHelper {
                     }
                 }
             }.onFailure {
-                LogUtils.log(it)
+                XPLogUtils.log(it)
             }.onSuccess {
-                LogUtils.log("bannedPkgList loaded")
+                XPLogUtils.log("bannedPkgList loaded")
             }
         }
         synchronized(bannedPkgSet) {
@@ -61,10 +59,12 @@ class BannedPkgHelper {
     }
 
     fun storeBannedPkgList() {
-        synchronized(bannedPkgListFile) {
+        synchronized(ioLock) {
             val list = allBannedPackages
             runCatching {
-                bannedPkgListFile.renameTo(bakFile)
+                if (bannedPkgListFile.exists()) {
+                    bannedPkgListFile.renameTo(bakFile)
+                }
                 bannedPkgListFile.bufferedWriter().use {
                     list.forEach { pkg ->
                         it.write(pkg)
@@ -72,8 +72,8 @@ class BannedPkgHelper {
                     }
                 }
             }.onFailure {
-                LogUtils.log("bannedPkgList save failed")
-                LogUtils.log(it)
+                XPLogUtils.log("bannedPkgList save failed")
+                XPLogUtils.log(it)
                 if (bakFile.exists()) {
                     bakFile.renameTo(bannedPkgListFile)
                 }
@@ -81,7 +81,7 @@ class BannedPkgHelper {
                 if (bakFile.exists()) {
                     bakFile.delete()
                 }
-                LogUtils.log("bannedPkgList saved")
+                XPLogUtils.log("bannedPkgList saved")
             }
         }
     }
