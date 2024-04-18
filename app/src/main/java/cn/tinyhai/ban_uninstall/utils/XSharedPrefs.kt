@@ -1,5 +1,6 @@
 package cn.tinyhai.ban_uninstall.utils
 
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -12,8 +13,9 @@ import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
 
+@SuppressLint("PrivateApi")
 object XSharedPrefs {
-    private lateinit var prefs: XSharedPreferences
+    private var prefs: XSharedPreferences = XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
 
     private var registered: Boolean = false
 
@@ -22,7 +24,7 @@ object XSharedPrefs {
     private val notifyListenerJob by lazy {
         Runnable {
             val listeners = listeners.toList()
-            LogUtils.log("notifyListener")
+            XPLogUtils.log("notifyListener")
             listeners.forEach {
                 it()
             }
@@ -42,24 +44,20 @@ object XSharedPrefs {
         }
     }
 
-    private lateinit var updater: Updater<BooleanArray>
+    private var updater: Updater<BooleanArray> = SimpleUpdater(
+        initValue = getPrefsSnapshot(),
+        shouldUpdate = { old, new ->
+            !new.contentEquals(old)
+        },
+        onRequestUpdate = { reloadAndUpdate() },
+        onUpdateSuccess = { postNotifyReloadListener() }
+    )
 
     fun init() {
         val xpVersion = XposedBridge.getXposedVersion()
-        prefs = XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
         if (xpVersion >= 93) {
             registerPrefChangeListener()
         }
-        prefs.reload()
-        updater =
-            SimpleUpdater(
-                initValue = getPrefsSnapshot(),
-                shouldUpdate = { old, new ->
-                    !new.contentEquals(old)
-                },
-                onRequestUpdate = { reloadAndUpdate() },
-                onUpdateSuccess = { postNotifyReloadListener() }
-            )
     }
 
     private val registerReceiverForAllUsers by lazy {
@@ -77,11 +75,12 @@ object XSharedPrefs {
     }
 
     fun listenSelfRemoved(context: Context) {
-        LogUtils.log("listenSelfRemoved")
+        XPLogUtils.log("listenSelfRemoved")
         val intentFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
             addDataScheme("package")
         }
+
         val receiver = object : BroadcastReceiver() {
             private val getSendingUserId by lazy {
                 BroadcastReceiver::class.java.getDeclaredMethod("getSendingUserId")
@@ -92,12 +91,12 @@ object XSharedPrefs {
                 val sendingUserId = getSendingUserId.invoke(this) as Int
                 val uri = intent.data
                 val packageName = uri?.encodedSchemeSpecificPart
-                LogUtils.log("pkg uninstall uri = $uri, userId = $sendingUserId")
+                XPLogUtils.log("pkg uninstall uri = $uri, userId = $sendingUserId")
                 packageName?.let {
                     TransactService.onPkgUninstall(packageName, sendingUserId)
                 }
                 if (intentFilter.hasAction(intent.action) && sendingUserId == 0 && packageName == BuildConfig.APPLICATION_ID) {
-                    LogUtils.log("self package removed")
+                    XPLogUtils.log("self package removed")
                     unregisterPrefChangeListener()
                     TransactService.onSelfRemoved()
                 }
@@ -120,7 +119,7 @@ object XSharedPrefs {
             return
         }
         if (prefs.file.parentFile?.exists() == true) {
-            LogUtils.log("register prefs listener")
+            XPLogUtils.log("register prefs listener")
             prefs.registerOnSharedPreferenceChangeListener(prefsChangeListener)
             registered = true
         }
@@ -128,7 +127,7 @@ object XSharedPrefs {
 
     fun unregisterPrefChangeListener() {
         if (registered) {
-            LogUtils.log("unregister prefs listener")
+            XPLogUtils.log("unregister prefs listener")
             prefs.unregisterOnSharedPreferenceChangeListener(prefsChangeListener)
             registered = false
         }
@@ -158,7 +157,7 @@ object XSharedPrefs {
     }
 
     private fun getPrefsSnapshot(): BooleanArray {
-        return booleanArrayOf(isBanUninstall, isBanClearData, isDevMode)
+        return booleanArrayOf(isBanUninstall, isBanClearData)
     }
 
     private fun postUpdateJob() {
@@ -173,14 +172,16 @@ object XSharedPrefs {
             }
             return
         }
-        LogUtils.log("start reload prefs")
+        XPLogUtils.log("start reload prefs")
         prefs.reload()
+
+        XPLogUtils.devMode = isDevMode
 
         updater.finishUpdate(getPrefsSnapshot())
     }
 
     private fun postNotifyReloadListener() {
-        LogUtils.log("postNotifyReloadListener")
+        XPLogUtils.log("postNotifyReloadListener")
         HandlerUtils.postDelay(notifyListenerJob, 0)
     }
 }

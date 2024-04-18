@@ -35,6 +35,6 @@ class SimpleUpdater<T>(
         }
         updating.compareAndSet(true, false)
         val updateElapsed = SystemClock.elapsedRealtime() - updateStartTime
-        LogUtils.log("finishUpdate: cost ${updateElapsed}ms")
+        XPLogUtils.log("finishUpdate: cost ${updateElapsed}ms")
     }
 }

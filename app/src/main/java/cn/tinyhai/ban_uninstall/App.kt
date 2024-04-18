@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.annotation.Keep
 
 class App : Application() {
     companion object {
@@ -22,6 +23,7 @@ class App : Application() {
         fun getXpTag() = app.getXpTag()
     }
 
+    @Keep
     fun getXpTag(): String {
         Log.d(TAG, "getXpTag return \"\"")
         return ""

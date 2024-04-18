@@ -9,7 +9,7 @@ import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.MainActivity
 import cn.tinyhai.ban_uninstall.transact.ITransactor
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
-import cn.tinyhai.ban_uninstall.utils.LogUtils
+import cn.tinyhai.ban_uninstall.utils.XPLogUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -97,7 +97,7 @@ class TransactClient(
             val component = intent.component ?: return
             if (component.isSelf()) {
                 if (userId > 0) {
-                    LogUtils.log("inject skip dual app")
+                    XPLogUtils.log("inject skip dual app")
                     return
                 }
                 val bundle = Bundle().apply {
@@ -106,7 +106,7 @@ class TransactClient(
                 intent.apply {
                     putExtras(bundle)
                 }
-                LogUtils.log("inject self success")
+                XPLogUtils.log("inject self success")
             }
         }
     }

@@ -25,3 +25,5 @@ dependencyResolutionManagement {
 rootProject.name = "BanUninstall"
 include(":app")
 include(":hiddenApi")
+include(":processor")
+include(":hook")
