@@ -27,7 +27,6 @@ class HookLaunchItemForInjectClient {
         val intent = param.args[0] as Intent
         val aInfo = param.args[2] as ActivityInfo
         val userId = aInfo.applicationInfo.uid / 100_000
-        Build.VERSION.SDK_INT
         TransactClient.injectBinderIfNeeded(TransactService, intent, userId)
     }
 
