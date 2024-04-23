@@ -103,7 +103,7 @@ class BannedAppViewModel : ViewModel() {
             updateState { it.copy(isRefreshing = true) }
             val pm = App.app.packageManager
             withContext(Dispatchers.IO) {
-                val allPackages = client?.fetchInstalledPackages() ?: emptyList()
+                val allPackages = client.fetchInstalledPackages()
                 val appInfoList = allPackages.map {
                     val label = it.applicationInfo.loadLabel(pm).toString()
                     val icon = it.applicationInfo.loadIcon(pm)
@@ -111,7 +111,7 @@ class BannedAppViewModel : ViewModel() {
                     val uid = it.applicationInfo.uid
                     AppInfo(label, icon, PkgInfo(packageName, uid / 100_000))
                 }
-                val bannedPkgInfos = client?.fetchAllBannedPackages() ?: emptyList()
+                val bannedPkgInfos = client.fetchAllBannedPackages()
                 val bannedAppInfos = ArrayList<AppInfo>()
                 val freedPkgInfos = appInfoList.toMutableList().apply {
                     for (bannedPkgInfo in bannedPkgInfos) {
@@ -136,7 +136,6 @@ class BannedAppViewModel : ViewModel() {
     }
 
     fun onBanPkgs(pkgInfos: List<PkgInfo>) {
-        val client = client ?: return
         viewModelScope.launch {
             val banned = client.banPackage(pkgInfos)
             if (banned.isEmpty()) {
@@ -157,7 +156,6 @@ class BannedAppViewModel : ViewModel() {
     }
 
     fun onFreePkgs(pkgInfos: List<PkgInfo>) {
-        val client = client ?: return
         viewModelScope.launch {
             val freed = client.freePackage(pkgInfos)
             if (freed.isEmpty()) {
