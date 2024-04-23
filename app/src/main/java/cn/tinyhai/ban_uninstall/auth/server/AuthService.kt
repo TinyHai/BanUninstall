@@ -84,7 +84,7 @@ object AuthService : IAuth.Stub() {
                     )
                 val authData = AuthData(
                     opId = opId,
-                    opType = opType,
+                    opTypeOrdinal = opType.ordinal,
                     opUid = callingUid,
                     opAppInfo = callingAppInfo,
                     appInfo = appInfo
