@@ -27,4 +27,23 @@
     <string name="text_cancel">Cancel</string>
     <string name="text_drag_target_remove_default">Drag to here to remove it from banned list</string>
     <string name="text_drag_target_remove_in_bound">Release to finish removing</string>
+    <string name="text_prevent">Prevent</string>
+    <string name="text_verify_and_allow">Verify&amp;Allow</string>
+    <string name="text_clear_app_data">Clear App\'s Data</string>
+    <string name="text_uninstall_app">Uninstall App</string>
+    <string name="text_try_op">tries to %1$s</string>
+    <string name="text_unknown_app">Unkown App</string>
+    <string name="title_verify_password">Verify Password</string>
+    <string name="text_verify_password_error">incorrect password</string>
+    <string name="group_title_security">Security</string>
+    <string name="switch_title_show_confirm">Show confirm dialog</string>
+    <string name="switch_subtitle_show_confirm">Show confirm dialog when someone tries to uninstall or clear data</string>
+    <string name="text_password_placeholder">Pls enter 4 to 16 pin</string>
+    <string name="title_set_password">Set pin</string>
+    <string name="menulink_change_password">Change pin</string>
+    <string name="switch_title_use_separate_password">Using a separate pin</string>
+    <string name="text_label_shell">Shell</string>
+    <string name="text_label_system">System</string>
+    <string name="text_label_root">Root</string>
+    <string name="switch_subtitle_use_separate_password">For confirm dialog and changing configs</string>
 </resources>
