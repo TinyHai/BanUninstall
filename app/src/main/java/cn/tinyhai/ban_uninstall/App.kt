@@ -20,6 +20,7 @@ class App : Application() {
         const val SP_KEY_BAN_CLEAR_DATA = "sp_ban_clear_data"
         const val SP_KEY_DEV_MODE = "sp_dev_mode"
         const val SP_KEY_USE_BANNED_LIST = "sp_key_use_banned_list"
+        const val SP_KEY_SHOW_CONFIRM = "sp_key_use_show_confirm"
         fun getXpTag() = app.getXpTag()
     }
 
