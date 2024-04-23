@@ -9,13 +9,15 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.os.Handler
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
+import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
 
 @SuppressLint("PrivateApi")
 object XSharedPrefs {
-    private var prefs: XSharedPreferences = XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
+    private var prefs: XSharedPreferences =
+        XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
 
     private var registered: Boolean = false
 
@@ -53,6 +55,12 @@ object XSharedPrefs {
         onUpdateSuccess = { postNotifyReloadListener() }
     )
 
+    init {
+        SystemContextHolder.registerCallback {
+            onSystemContext(it)
+        }
+    }
+
     fun init() {
         val xpVersion = XposedBridge.getXposedVersion()
         if (xpVersion >= 93) {
@@ -74,8 +82,8 @@ object XSharedPrefs {
         }
     }
 
-    fun listenSelfRemoved(context: Context) {
-        XPLogUtils.log("listenSelfRemoved")
+    private fun onSystemContext(context: Context) {
+        XPLogUtils.log("start listen self remove broadcast")
         val intentFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
             addDataScheme("package")
@@ -99,6 +107,7 @@ object XSharedPrefs {
                     XPLogUtils.log("self package removed")
                     unregisterPrefChangeListener()
                     TransactService.onSelfRemoved()
+                    AuthService.onSelfRemoved()
                 }
             }
         }
@@ -144,6 +153,9 @@ object XSharedPrefs {
 
     val isUseBannedList
         get() = prefs.getBoolean(App.SP_KEY_USE_BANNED_LIST, false)
+
+    val isShowConfirm
+        get() = prefs.getBoolean(App.SP_KEY_SHOW_CONFIRM, false)
 
     fun registerPrefsChangeListener(onPrefsChange: () -> Unit) {
         listeners.add(onPrefsChange)
