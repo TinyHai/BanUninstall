@@ -36,6 +36,8 @@
     <string name="text_verify_and_allow">验证并允许</string>
     <string name="text_clear_app_data">清除应用数据</string>
     <string name="text_uninstall_app">卸载应用</string>
+    <string name="text_clear_the_app_data">清除 %1$s 的数据</string>
+    <string name="text_uninstall_the_app">卸载 %1$s</string>
     <string name="text_try_op">尝试%1$s</string>
     <string name="text_verify_password_error">密码错误</string>
     <string name="text_password_placeholder">请输入4–16位数字密码</string>
@@ -45,4 +47,6 @@
     <string name="text_label_root">Root</string>
     <string name="title_verify_password">验证密码</string>
     <string name="title_set_password">设置密码</string>
+    <string name="title_auth">需要验证</string>
+    <string name="description_auth">请完成验证以允许%1$s</string>
 </resources>
