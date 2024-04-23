@@ -7,18 +7,20 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 data class AuthData(
     val opId: Int,
-    val opType: OpType,
+    val opTypeOrdinal: Int,
     val opUid: Int,
     val opAppInfo: ApplicationInfo?,
     val appInfo: ApplicationInfo
 ) : Parcelable {
+
+    val opType get() = OpType.entries[opTypeOrdinal]
 
     val isEmpty get() = this === Empty
 
     companion object {
         val Empty = AuthData(
             -1,
-            OpType.ClearData,
+            -1,
             -1,
             null,
             ApplicationInfo()
