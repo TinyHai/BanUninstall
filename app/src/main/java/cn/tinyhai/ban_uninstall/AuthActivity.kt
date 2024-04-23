@@ -69,6 +69,24 @@ class AuthActivity : AppCompatActivity() {
                     onVerify = { viewModel.authenticate(it) },
                 )
 
+                val isDual = authData.appInfo.uid / 100_000 > 0
+                val appLabel = authData.appInfo.loadLabel(context.packageManager).toString().let {
+                    if (isDual) stringResource(R.string.text_app_label_dual, it) else it
+                }
+
+                val opText = when (authData.opType) {
+                    OpType.ClearData -> stringResource(
+                        id = R.string.text_clear_the_app_data,
+                        appLabel
+                    )
+
+                    OpType.Uninstall -> stringResource(
+                        id = R.string.text_uninstall_the_app,
+                        appLabel
+                    )
+                }
+                val authTitle = stringResource(R.string.title_auth)
+                val authDescription = stringResource(R.string.description_auth, opText)
                 ConfirmDialogContent(
                     authData = viewModel.authData,
                     onConfirm = {
@@ -78,9 +96,12 @@ class AuthActivity : AppCompatActivity() {
                                     finishOp(true)
                                 }
                             } else {
-                                BiometricUtils.auth(context).onSuccess { success ->
-                                    finishOp(success)
-                                }
+                                BiometricUtils.auth(context, authTitle, authDescription)
+                                    .onSuccess { success ->
+                                        if (success) {
+                                            finishOp(true)
+                                        }
+                                    }
                             }
                         }
                     },
