@@ -2,8 +2,10 @@ package cn.tinyhai.ban_uninstall.auth.entites
 
 import android.content.pm.ApplicationInfo
 import android.os.Parcelable
+import androidx.annotation.Keep
 import kotlinx.parcelize.Parcelize
 
+@Keep
 @Parcelize
 data class AuthData(
     val opId: Int,
