@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", intent.toString())
-        TransactClient.init(intent)
+        TransactClient.inject(intent)
         enableEdgeToEdge()
         setContent {
             AppTheme {
