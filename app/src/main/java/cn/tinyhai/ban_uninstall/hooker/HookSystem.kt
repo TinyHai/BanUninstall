@@ -1,6 +1,8 @@
 package cn.tinyhai.ban_uninstall.hooker
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.IPackageDataObserver
 import android.content.pm.IPackageDeleteObserver2
 import android.content.pm.VersionedPackage
@@ -11,12 +13,12 @@ import android.os.Process
 import androidx.annotation.RequiresApi
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.auth.server.AuthService
+import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import cn.tinyhai.ban_uninstall.utils.SystemContextHolder
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
 import cn.tinyhai.xp.annotation.*
-import cn.tinyhai.xp.hook.HookLaunchItemForInjectClientImpl
 import cn.tinyhai.xp.hook.Hooker
 import cn.tinyhai.xp.hook.UnhookableHooker
 import cn.tinyhai.xp.hook.logger.XPLogger
@@ -65,6 +67,50 @@ class HookSystem(
         }
     }
 
+    @Oneshot
+    @MethodHooker(
+        className = "android.app.servertransaction.LaunchActivityItem",
+        methodName = "obtain",
+        hookType = HookType.BeforeMethod,
+        minSdkInclusive = Build.VERSION_CODES.P
+    )
+    fun beforeObtain(param: MethodHookParam) {
+        val intent = param.args[0] as Intent
+        val aInfo = param.args[2] as ActivityInfo
+        val userId = aInfo.applicationInfo.uid / 100_000
+        TransactClient.injectBinderIfNeeded(TransactService, intent, userId)
+    }
+
+    @Oneshot
+    @MethodHooker(
+        className = "android.app.IApplicationThread\$Stub\$Proxy",
+        methodName = "scheduleLaunchActivity",
+        hookType = HookType.BeforeMethod,
+        minSdkInclusive = Build.VERSION_CODES.O,
+        maxSdkExclusive = Build.VERSION_CODES.P
+    )
+    fun beforeScheduleLaunchActivity0(param: MethodHookParam) {
+        beforeScheduleLaunchActivity(param)
+    }
+
+    @Oneshot
+    @MethodHooker(
+        className = "android.app.ApplicationThreadNative",
+        methodName = "scheduleLaunchActivity",
+        hookType = HookType.BeforeMethod,
+        maxSdkExclusive = Build.VERSION_CODES.O
+    )
+    fun beforeScheduleLaunchActivity1(param: MethodHookParam) {
+        beforeScheduleLaunchActivity(param)
+    }
+
+    private fun beforeScheduleLaunchActivity(param: MethodHookParam) {
+        val intent = param.args[0] as Intent
+        val aInfo = param.args[3] as ActivityInfo
+        val userId = aInfo.applicationInfo.uid / 100_000
+        TransactClient.injectBinderIfNeeded(TransactService, intent, userId)
+    }
+
     @Oneshot(unhookable = true)
     @MethodHooker(
         className = "com.android.server.SystemServiceManager",
@@ -75,9 +121,6 @@ class HookSystem(
         val phase = param.args.lastOrNull() as? Int ?: 0
         if (phase == 1000 /* PHASE_BOOT_COMPLETED */) {
             TransactService.onSystemBootCompleted()
-
-            HookLaunchItemForInjectClientImpl(logger).startHook(lp)
-
             val activityThread =
                 XposedHelpers.findClass("android.app.ActivityThread", lp.classLoader)
                     .getDeclaredField("sCurrentActivityThread")
