@@ -2,11 +2,14 @@ package cn.tinyhai.ban_uninstall.transact.client
 
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.MainActivity
+import cn.tinyhai.ban_uninstall.auth.IAuth
+import cn.tinyhai.ban_uninstall.auth.client.AuthClient
 import cn.tinyhai.ban_uninstall.transact.ITransactor
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.utils.XPLogUtils
@@ -14,20 +17,26 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class TransactClient(
-    private val remote: ITransactor
-) {
+    private var remote: ITransactor
+) : IBinder.DeathRecipient {
+
+    init {
+        remote.asBinder()?.linkToDeath(this, 0)
+        remote.onAppLaunched()
+    }
+
     private val outputList: MutableList<String> = arrayListOf()
         get() {
             field.clear()
             return field
         }
 
-    suspend fun fetchInstalledPackages() = withContext(Dispatchers.IO) {
-        remote.packages.list
+    suspend fun fetchInstalledPackages(): List<PackageInfo> = withContext(Dispatchers.IO) {
+        remote.packages.list ?: emptyList()
     }
 
     suspend fun fetchAllBannedPackages() = withContext(Dispatchers.IO) {
-        remote.allBannedPackages.map { PkgInfo(it) }
+        remote.allBannedPackages?.map { PkgInfo(it) } ?: emptyList()
     }
 
     suspend fun banPackage(pkgInfos: List<PkgInfo>): List<PkgInfo> {
@@ -46,8 +55,8 @@ class TransactClient(
         return output.map { PkgInfo(it) }
     }
 
-    suspend fun sayHello(hello: String) = withContext(Dispatchers.IO) {
-        remote.sayHello(hello)
+    suspend fun sayHello(hello: String): String = withContext(Dispatchers.IO) {
+        remote.sayHello(hello) ?: ""
     }
 
     fun onAppLaunched() {
@@ -58,35 +67,38 @@ class TransactClient(
         remote.reloadPrefs()
     }
 
+    fun getAuthClient(): AuthClient {
+        val remoteAuth = remote.auth?.let {
+            IAuth.Stub.asInterface(it)
+        } ?: IAuth.Default()
+        return AuthClient(remoteAuth)
+    }
+
+    override fun binderDied() {
+        remote.asBinder()?.unlinkToDeath(this, 0)
+        remote = ITransactor.Default()
+    }
+
     companion object {
         private const val TAG = "TransactClient"
 
-        private const val KEY_CLIENT = "key_client"
+        private const val KEY_TRANSACT = "key_transact"
 
-        private var client: TransactClient? = null
+        private lateinit var client: TransactClient
 
-        private val clientDeathRecipient = object : IBinder.DeathRecipient {
-            override fun binderDied() {
-                client?.remote?.asBinder()?.unlinkToDeath(this, 0)
-                client = null
-            }
-        }
-
-        operator fun invoke(): TransactClient? {
+        operator fun invoke(): TransactClient {
             return client
         }
 
-        fun init(intent: Intent) {
-            val binder = intent.extras?.getBinder(KEY_CLIENT)
+        fun inject(intent: Intent) {
+            val binder = intent.extras?.getBinder(KEY_TRANSACT)
             Log.d(TAG, "$binder")
-            binder?.let {
-                val remote = ITransactor.Stub.asInterface(it)
-                it.linkToDeath(clientDeathRecipient, 0)
-                TransactClient(remote).also {
-                    it.onAppLaunched()
-                    client = it
-                }
+            val remote = if (binder != null) {
+                ITransactor.Stub.asInterface(binder)
+            } else {
+                ITransactor.Default()
             }
+            client = TransactClient(remote).also { it.onAppLaunched() }
         }
 
         private fun ComponentName.isSelf(): Boolean {
@@ -101,12 +113,12 @@ class TransactClient(
                     return
                 }
                 val bundle = Bundle().apply {
-                    putBinder(KEY_CLIENT, remote.asBinder())
+                    putBinder(KEY_TRANSACT, remote.asBinder())
                 }
                 intent.apply {
                     putExtras(bundle)
                 }
-                XPLogUtils.log("inject self success")
+                XPLogUtils.log("inject transact success")
             }
         }
     }
