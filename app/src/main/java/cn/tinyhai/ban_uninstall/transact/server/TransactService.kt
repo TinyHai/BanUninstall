@@ -5,10 +5,8 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.IPackageManager
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager.NameNotFoundException
-import android.os.Binder
-import android.os.IUserManager
-import android.os.Process
-import android.os.ServiceManager
+import android.os.*
+import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.transact.ITransactor
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.utils.HandlerUtils
@@ -116,12 +114,12 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         XSharedPrefs.reload()
     }
 
-    override fun contains(packageName: String, userId: Int): Boolean {
-        return helper.allBannedPkgInfo.contains(PkgInfo(packageName, userId))
+    override fun getAuth(): IBinder {
+        return AuthService.asBinder()
     }
 
-    fun onSelfRemoved() {
-        helper.destroy()
+    override fun contains(packageName: String, userId: Int): Boolean {
+        return helper.allBannedPkgInfo.contains(PkgInfo(packageName, userId))
     }
 
     fun onPkgUninstall(packageName: String, userId: Int) {

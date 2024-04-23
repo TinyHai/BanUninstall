@@ -1,17 +1,14 @@
 package cn.tinyhai.ban_uninstall.auth.server
 
 import cn.tinyhai.ban_uninstall.BuildConfig
+import cn.tinyhai.ban_uninstall.configs.Configs
 import cn.tinyhai.ban_uninstall.utils.writeWithBak
 import java.io.File
 
 class AuthHelper {
-    companion object {
-        private const val CONFIG_PATH = "/data/misc/adb/${BuildConfig.APPLICATION_ID}"
-        private const val AUTH_FILE_PATH = "$CONFIG_PATH/auth"
-    }
 
     private val authFile: File
-        get() = File(AUTH_FILE_PATH).apply {
+        get() = File(Configs.authFilePath).apply {
             parentFile?.mkdirs()
         }
 

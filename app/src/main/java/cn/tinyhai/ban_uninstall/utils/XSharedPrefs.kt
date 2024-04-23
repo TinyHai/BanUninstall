@@ -10,6 +10,7 @@ import android.os.Handler
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.auth.server.AuthService
+import cn.tinyhai.ban_uninstall.configs.Configs
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
@@ -106,8 +107,7 @@ object XSharedPrefs {
                 if (intentFilter.hasAction(intent.action) && sendingUserId == 0 && packageName == BuildConfig.APPLICATION_ID) {
                     XPLogUtils.log("self package removed")
                     unregisterPrefChangeListener()
-                    TransactService.onSelfRemoved()
-                    AuthService.onSelfRemoved()
+                    Configs.onSelfRemoved()
                 }
             }
         }
