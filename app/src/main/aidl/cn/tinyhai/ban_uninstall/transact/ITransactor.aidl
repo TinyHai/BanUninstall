@@ -19,4 +19,6 @@ interface ITransactor {
     oneway void onAppLaunched();
 
     oneway void reloadPrefs();
+
+    IBinder getAuth();
 }
