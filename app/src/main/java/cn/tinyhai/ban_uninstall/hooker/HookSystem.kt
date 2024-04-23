@@ -4,11 +4,16 @@ import android.content.Context
 import android.content.pm.IPackageDataObserver
 import android.content.pm.IPackageDeleteObserver2
 import android.content.pm.VersionedPackage
+import android.os.Binder
 import android.os.Build
 import android.os.Handler
+import android.os.Process
 import androidx.annotation.RequiresApi
 import cn.tinyhai.ban_uninstall.App
+import cn.tinyhai.ban_uninstall.auth.server.AuthService
+import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
+import cn.tinyhai.ban_uninstall.utils.SystemContextHolder
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
 import cn.tinyhai.xp.annotation.*
 import cn.tinyhai.xp.hook.HookLaunchItemForInjectClientImpl
@@ -82,7 +87,7 @@ class HookSystem(
                     .also { it.isAccessible = true }.get(activityThread) as? Context
             logger.info("systemContext: $systemContext")
             systemContext?.let {
-                XSharedPrefs.listenSelfRemoved(it)
+                SystemContextHolder.onSystemContext(it)
             }
             unhook()
         }
@@ -114,76 +119,82 @@ class HookSystem(
         maxSdkExclusive = Build.VERSION_CODES.O
     )
     fun beforeDeletePackage(param: MethodHookParam) {
-        val packageName = param.args[0] as String
-        val observer2 = param.args[1] as? IPackageDeleteObserver2
-        val userId = param.args[2] as Int
-        val isUseBannedList = XSharedPrefs.isUseBannedList
-        logger.info("${param.method.name}(packageName: $packageName, observer2: ${observer2.hashCode()} userId: $userId)")
-        when {
-            isUseBannedList && TransactService.contains(
-                packageName,
-                userId
-            ) -> {
-                logger.info("(in bannedList) -> return early")
-                observer2?.let {
-                    getPMSHandler(param.thisObject)?.post {
-                        logger.info("invoke observer2#onPackageDeleted($packageName, -1, null)")
-                        it.onPackageDeleted(packageName, -1, null)
-                    }
-                }
-                param.args[0] = null
-            }
-
-            !isUseBannedList -> {
-                logger.info("(all) -> return early")
-                observer2?.let {
-                    getPMSHandler(param.thisObject)?.post {
-                        logger.info("invoke observer2#onPackageDeleted($packageName, -1, null)")
-                        it.onPackageDeleted(packageName, -1, null)
-                    }
-                }
-                param.args[0] = null
-            }
-
-            else -> {}
-        }
+        handleDeletePackage(param)
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun handleDeletePackage(param: MethodHookParam) {
-        val versionedPackage = param.args[0] as VersionedPackage
-        val packageName = versionedPackage.packageName
+        val packageName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            (param.args[0] as? VersionedPackage)?.packageName
+        } else {
+            param.args[0] as? String
+        } ?: ""
         val observer2 = param.args[1] as? IPackageDeleteObserver2
         val userId = param.args[2] as Int
-        val isUseBannedList = XSharedPrefs.isUseBannedList
         logger.info("${param.method.name}(packageName: $packageName, observer2: ${observer2.hashCode()} userId: $userId)")
-        when {
-            isUseBannedList && TransactService.contains(
-                packageName,
-                userId
-            ) -> {
-                logger.info("(in bannedList) -> return early")
-                observer2?.let {
-                    getPMSHandler(param.thisObject)?.post {
-                        logger.info("invoke observer2#onPackageDeleted($packageName, -1, null)")
-                        it.onPackageDeleted(packageName, -1, null)
-                    }
-                }
-                param.result = null
-            }
+        val isUseBannedList = XSharedPrefs.isUseBannedList
+        val isShowConfirm = XSharedPrefs.isShowConfirm
+        logger.info("(isUseBannedList: $isUseBannedList, isShowConfirm: $isShowConfirm) -> return early")
 
-            !isUseBannedList -> {
-                logger.info("(all) -> return early")
-                observer2?.let {
-                    getPMSHandler(param.thisObject)?.post {
-                        logger.info("invoke observer2#onPackageDeleted($packageName, -1, null)")
-                        it.onPackageDeleted(packageName, -1, null)
-                    }
+        fun postObserver() {
+            observer2?.let {
+                getPMSHandler(param.thisObject)?.post {
+                    logger.info("invoke observer2#onPackageDeleted($packageName, -1, null)")
+                    it.onPackageDeleted(
+                        packageName,
+                        -1,
+                        null
+                    )
                 }
-                param.result = null
             }
+        }
 
-            else -> {}
+        fun invokeOrigin() {
+            runCatching {
+                XposedBridge.invokeOriginalMethod(param.method, param.thisObject, param.args)
+            }.onSuccess {
+                logger.info("uninstall success")
+            }.onFailure {
+                logger.error("uninstall failure", it)
+            }
+        }
+
+        if (isUseBannedList && TransactService.contains(packageName, userId)) {
+            logger.info("${packageName}:$userId is in banned list")
+            if (isShowConfirm) {
+                AuthService.showUninstallConfirm(
+                    onConfirm = {
+                        invokeOrigin()
+                    },
+                    onCancel = {
+                        postObserver()
+                        logger.info("prevent uninstall")
+                    },
+                    pkgInfo = PkgInfo(packageName, userId),
+                    callingUid = Binder.getCallingUid(),
+                    callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                )
+            } else {
+                postObserver()
+            }
+            param.result = null
+        } else {
+            if (isShowConfirm) {
+                AuthService.showUninstallConfirm(
+                    onConfirm = {
+                        invokeOrigin()
+                    },
+                    onCancel = {
+                        postObserver()
+                        logger.info("prevent uninstall")
+                    },
+                    pkgInfo = PkgInfo(packageName, userId),
+                    callingUid = Binder.getCallingUid(),
+                    callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                )
+            } else {
+                postObserver()
+            }
+            param.result = null
         }
     }
 
@@ -209,36 +220,80 @@ class HookSystem(
         handleDeletePackage(param)
     }
 
-    private fun handleClearApplicationUserData(param: MethodHookParam) {
-        val packageName = param.args[0] as String
-        val observer = param.args[1] as? IPackageDataObserver
-        val userId = param.args[2] as Int
+    private fun handleClearApplicationUserData(param: MethodHookParam, isFromAm: Boolean = false) {
+        // calling from self, skip
+        if (Binder.getCallingPid() == Process.myPid()) {
+            return
+        }
+        val args = param.args
+        val packageName = args[0] as String
+        val observer = param.args[args.lastIndex - 1] as? IPackageDataObserver
+        val userId = param.args[args.lastIndex] as Int
         logger.info("${param.method.name}(packageName: $packageName, observer: ${observer.hashCode()}, userId: $userId)")
         val isUseBannedList = XSharedPrefs.isUseBannedList
-        when {
-            isUseBannedList && TransactService.contains(packageName, userId) -> {
-                logger.info("(in bannedList) -> return early")
-                observer?.let {
-                    getPMSHandler(param.thisObject)?.post {
-                        logger.info("invoke observer#onRemoveCompleted($packageName, false)")
-                        it.onRemoveCompleted(packageName, false)
-                    }
-                }
-                param.result = null
-            }
+        val isShowConfirm = XSharedPrefs.isShowConfirm
+        logger.info("(isUseBannedList: $isUseBannedList, isShowConfirm: $isShowConfirm) -> return early")
 
-            !isUseBannedList -> {
-                logger.info("(all) -> return early")
-                observer?.let {
-                    getPMSHandler(param.thisObject)?.post {
-                        logger.info("invoke observer#onRemoveCompleted($packageName, false)")
-                        it.onRemoveCompleted(packageName, false)
-                    }
+        fun postObserver() {
+            observer?.let {
+                getPMSHandler(param.thisObject)?.post {
+                    logger.info("invoke observer#onRemoveCompleted($packageName, false)")
+                    it.onRemoveCompleted(packageName, false)
                 }
-                param.result = null
             }
+        }
 
-            else -> {}
+        fun invokeOrigin() {
+            runCatching {
+                XposedBridge.invokeOriginalMethod(
+                    param.method,
+                    param.thisObject,
+                    param.args
+                )
+            }.onSuccess {
+                logger.info("clear success")
+            }.onFailure {
+                logger.error("clear failure", it)
+            }
+        }
+
+        if (isUseBannedList && TransactService.contains(packageName, userId)) {
+            logger.info("${packageName}:$userId is in banned list")
+            if (isShowConfirm) {
+                AuthService.showClearDataConfirm(
+                    onConfirm = {
+                        invokeOrigin()
+                    },
+                    onCancel = {
+                        postObserver()
+                        logger.info("prevent clear")
+                    },
+                    pkgInfo = PkgInfo(packageName, userId),
+                    callingUid = Binder.getCallingUid(),
+                    callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                )
+            } else {
+                postObserver()
+            }
+            param.result = if (isFromAm) true else null
+        } else {
+            if (isShowConfirm) {
+                AuthService.showClearDataConfirm(
+                    onConfirm = {
+                        invokeOrigin()
+                    },
+                    onCancel = {
+                        postObserver()
+                        logger.info("prevent clear")
+                    },
+                    pkgInfo = PkgInfo(packageName, userId),
+                    callingUid = Binder.getCallingUid(),
+                    callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                )
+            } else {
+                postObserver()
+            }
+            param.result = if (isFromAm) true else null
         }
     }
 
@@ -260,5 +315,14 @@ class HookSystem(
     )
     fun beforeClearApplicationUserData1(param: MethodHookParam) {
         handleClearApplicationUserData(param)
+    }
+
+    @HookerId(App.SP_KEY_BAN_CLEAR_DATA)
+    @MethodHooker(
+        className = "com.android.server.am.ActivityManagerService",
+        methodName = "clearApplicationUserData",
+    )
+    fun beforeClearApplicationUserData2(param: MethodHookParam) {
+        handleClearApplicationUserData(param, true)
     }
 }
