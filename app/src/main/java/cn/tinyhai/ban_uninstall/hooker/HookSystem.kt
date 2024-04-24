@@ -176,7 +176,7 @@ class HookSystem(
         logger.info("${param.method.name}(packageName: $packageName, observer2: ${observer2.hashCode()} userId: $userId)")
         val isUseBannedList = XSharedPrefs.isUseBannedList
         val isShowConfirm = XSharedPrefs.isShowConfirm
-        logger.info("(isUseBannedList: $isUseBannedList, isShowConfirm: $isShowConfirm) -> return early")
+        logger.info("(isUseBannedList: $isUseBannedList, isShowConfirm: $isShowConfirm)")
 
         fun postObserver() {
             observer2?.let {
@@ -201,43 +201,51 @@ class HookSystem(
             }
         }
 
-        if (isUseBannedList && TransactService.contains(packageName, userId)) {
-            logger.info("${packageName}:$userId is in banned list")
-            if (isShowConfirm) {
-                AuthService.showUninstallConfirm(
-                    onConfirm = {
-                        invokeOrigin()
-                    },
-                    onCancel = {
-                        postObserver()
-                        logger.info("prevent uninstall")
-                    },
-                    pkgInfo = PkgInfo(packageName, userId),
-                    callingUid = Binder.getCallingUid(),
-                    callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
-                )
-            } else {
-                postObserver()
+        when {
+            !isUseBannedList -> {
+                if (isShowConfirm) {
+                    AuthService.showUninstallConfirm(
+                        onConfirm = {
+                            invokeOrigin()
+                        },
+                        onCancel = {
+                            postObserver()
+                            logger.info("prevent uninstall")
+                        },
+                        pkgInfo = PkgInfo(packageName, userId),
+                        callingUid = Binder.getCallingUid(),
+                        callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                    )
+                } else {
+                    postObserver()
+                }
+                param.result = null
             }
-            param.result = null
-        } else {
-            if (isShowConfirm) {
-                AuthService.showUninstallConfirm(
-                    onConfirm = {
-                        invokeOrigin()
-                    },
-                    onCancel = {
-                        postObserver()
-                        logger.info("prevent uninstall")
-                    },
-                    pkgInfo = PkgInfo(packageName, userId),
-                    callingUid = Binder.getCallingUid(),
-                    callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
-                )
-            } else {
-                postObserver()
+
+            TransactService.contains(packageName, userId) -> {
+                logger.info("${packageName}:$userId is in banned list -> return early")
+                if (isShowConfirm) {
+                    AuthService.showUninstallConfirm(
+                        onConfirm = {
+                            invokeOrigin()
+                        },
+                        onCancel = {
+                            postObserver()
+                            logger.info("prevent uninstall")
+                        },
+                        pkgInfo = PkgInfo(packageName, userId),
+                        callingUid = Binder.getCallingUid(),
+                        callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                    )
+                } else {
+                    postObserver()
+                }
+                param.result = null
             }
-            param.result = null
+
+            else -> {
+                logger.info("$packageName:$userId is not in banned list -> pass")
+            }
         }
     }
 
@@ -275,7 +283,7 @@ class HookSystem(
         logger.info("${param.method.name}(packageName: $packageName, observer: ${observer.hashCode()}, userId: $userId)")
         val isUseBannedList = XSharedPrefs.isUseBannedList
         val isShowConfirm = XSharedPrefs.isShowConfirm
-        logger.info("(isUseBannedList: $isUseBannedList, isShowConfirm: $isShowConfirm) -> return early")
+        logger.info("(isUseBannedList: $isUseBannedList, isShowConfirm: $isShowConfirm, isFromAm: $isFromAm)")
 
         fun postObserver() {
             observer?.let {
@@ -300,43 +308,51 @@ class HookSystem(
             }
         }
 
-        if (isUseBannedList && TransactService.contains(packageName, userId)) {
-            logger.info("${packageName}:$userId is in banned list")
-            if (isShowConfirm) {
-                AuthService.showClearDataConfirm(
-                    onConfirm = {
-                        invokeOrigin()
-                    },
-                    onCancel = {
-                        postObserver()
-                        logger.info("prevent clear")
-                    },
-                    pkgInfo = PkgInfo(packageName, userId),
-                    callingUid = Binder.getCallingUid(),
-                    callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
-                )
-            } else {
-                postObserver()
+        when {
+            !isUseBannedList -> {
+                if (isShowConfirm) {
+                    AuthService.showClearDataConfirm(
+                        onConfirm = {
+                            invokeOrigin()
+                        },
+                        onCancel = {
+                            postObserver()
+                            logger.info("prevent clear")
+                        },
+                        pkgInfo = PkgInfo(packageName, userId),
+                        callingUid = Binder.getCallingUid(),
+                        callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                    )
+                } else {
+                    postObserver()
+                }
+                param.result = if (isFromAm) true else null
             }
-            param.result = if (isFromAm) true else null
-        } else {
-            if (isShowConfirm) {
-                AuthService.showClearDataConfirm(
-                    onConfirm = {
-                        invokeOrigin()
-                    },
-                    onCancel = {
-                        postObserver()
-                        logger.info("prevent clear")
-                    },
-                    pkgInfo = PkgInfo(packageName, userId),
-                    callingUid = Binder.getCallingUid(),
-                    callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
-                )
-            } else {
-                postObserver()
+
+            TransactService.contains(packageName, userId) -> {
+                logger.info("${packageName}:$userId is in banned list  -> return early")
+                if (isShowConfirm) {
+                    AuthService.showClearDataConfirm(
+                        onConfirm = {
+                            invokeOrigin()
+                        },
+                        onCancel = {
+                            postObserver()
+                            logger.info("prevent clear")
+                        },
+                        pkgInfo = PkgInfo(packageName, userId),
+                        callingUid = Binder.getCallingUid(),
+                        callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                    )
+                } else {
+                    postObserver()
+                }
+                param.result = if (isFromAm) true else null
             }
-            param.result = if (isFromAm) true else null
+
+            else -> {
+                logger.info("${packageName}:$userId is not in banned list -> pass")
+            }
         }
     }
 
