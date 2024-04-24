@@ -4,6 +4,11 @@
 
 A Xposed Module that prevents apps be uninstall or apps' data be cleared
 
+### Screenshots
+|                    1                     |                    2                     |                    3                     |
+|:----------------------------------------:|:----------------------------------------:|:----------------------------------------:|
+| <img src="screenshots/screenshot1.jpg"/> | <img src="screenshots/screenshot2.jpg"/> | <img src="screenshots/screenshot3.jpg"/> |
+
 ### Compatibility
 Android 5.0 - Android 14
 
