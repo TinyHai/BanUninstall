@@ -1,26 +1,74 @@
 package cn.tinyhai.ban_uninstall.utils
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.os.Handler
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
-import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.configs.Configs
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import de.robv.android.xposed.XSharedPreferences
-import de.robv.android.xposed.XposedBridge
+
+private class MapPreferences(
+    initMap: Map<String, *> = emptyMap<String, Any>()
+) : SharedPreferences {
+
+    @Volatile
+    private var map: Map<String, *> = initMap
+
+    fun update(map: Map<String, *>) {
+        this.map = map
+    }
+
+    override fun getAll(): Map<String, *> {
+        return HashMap(map)
+    }
+
+    override fun getString(key: String, defValue: String?): String? {
+        return map[key] as? String ?: defValue
+    }
+
+    override fun getStringSet(key: String, defValues: Set<String>?): Set<String>? {
+        return map[key] as? Set<String> ?: defValues
+    }
+
+    override fun getInt(key: String, defValue: Int): Int {
+        return map[key] as? Int ?: defValue
+    }
+
+    override fun getLong(key: String, defValue: Long): Long {
+        return map[key] as? Long ?: defValue
+    }
+
+    override fun getFloat(key: String, defValue: Float): Float {
+        return map[key] as? Float ?: defValue
+    }
+
+    override fun getBoolean(key: String, defValue: Boolean): Boolean {
+        return map[key] as? Boolean ?: defValue
+    }
+
+    override fun contains(key: String): Boolean {
+        return map.containsKey(key)
+    }
+
+    override fun edit(): SharedPreferences.Editor {
+        throw UnsupportedOperationException()
+    }
+
+    override fun registerOnSharedPreferenceChangeListener(listener: OnSharedPreferenceChangeListener?) {
+        throw UnsupportedOperationException()
+    }
+
+    override fun unregisterOnSharedPreferenceChangeListener(listener: OnSharedPreferenceChangeListener?) {
+        throw UnsupportedOperationException()
+    }
+}
 
 @SuppressLint("PrivateApi")
 object XSharedPrefs {
-    private var prefs: XSharedPreferences =
-        XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
-
-    private var registered: Boolean = false
+    private val prefs: MapPreferences
 
     private val listeners = ArrayList<() -> Unit>()
 
@@ -34,38 +82,12 @@ object XSharedPrefs {
         }
     }
 
-    private const val UPDATE_DELAY = 2000L
-    private val updateJob by lazy {
-        Runnable {
-            updater.requestUpdate()
-        }
-    }
-
-    private val prefsChangeListener by lazy {
-        OnSharedPreferenceChangeListener { _, _ ->
-            postUpdateJob()
-        }
-    }
-
-    private var updater: Updater<BooleanArray> = SimpleUpdater(
-        initValue = getPrefsSnapshot(),
-        shouldUpdate = { old, new ->
-            !new.contentEquals(old)
-        },
-        onRequestUpdate = { reloadAndUpdate() },
-        onUpdateSuccess = { postNotifyReloadListener() }
-    )
-
     init {
+        val xprefs = XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
+        prefs = MapPreferences(xprefs.all)
+
         SystemContextHolder.registerCallback {
             onSystemContext(it)
-        }
-    }
-
-    fun init() {
-        val xpVersion = XposedBridge.getXposedVersion()
-        if (xpVersion >= 93) {
-            registerPrefChangeListener()
         }
     }
 
@@ -106,7 +128,6 @@ object XSharedPrefs {
                 }
                 if (intentFilter.hasAction(intent.action) && sendingUserId == 0 && packageName == BuildConfig.APPLICATION_ID) {
                     XPLogUtils.log("self package removed")
-                    unregisterPrefChangeListener()
                     Configs.onSelfRemoved()
                 }
             }
@@ -121,25 +142,6 @@ object XSharedPrefs {
             )
             Unit
         } ?: context.registerReceiver(receiver, intentFilter)
-    }
-
-    fun registerPrefChangeListener() {
-        if (registered) {
-            return
-        }
-        if (prefs.file.parentFile?.exists() == true) {
-            XPLogUtils.log("register prefs listener")
-            prefs.registerOnSharedPreferenceChangeListener(prefsChangeListener)
-            registered = true
-        }
-    }
-
-    fun unregisterPrefChangeListener() {
-        if (registered) {
-            XPLogUtils.log("unregister prefs listener")
-            prefs.unregisterOnSharedPreferenceChangeListener(prefsChangeListener)
-            registered = false
-        }
     }
 
     val isBanUninstall
@@ -161,35 +163,17 @@ object XSharedPrefs {
         listeners.add(onPrefsChange)
     }
 
-    fun reload() {
-        if (XposedBridge.getXposedVersion() > 92) {
-            return
+    fun update(map: Map<String, *>) {
+        val oldSnapshot = getPrefsSnapshot()
+        prefs.update(map)
+        val newSnapshot = getPrefsSnapshot()
+        if (!oldSnapshot.contentEquals(newSnapshot)) {
+            postNotifyReloadListener()
         }
-        updater.requestUpdate()
     }
 
     private fun getPrefsSnapshot(): BooleanArray {
         return booleanArrayOf(isBanUninstall, isBanClearData)
-    }
-
-    private fun postUpdateJob() {
-        HandlerUtils.removeWorkerRunnable(updateJob)
-        HandlerUtils.postWorkerDelay(updateJob, UPDATE_DELAY)
-    }
-
-    private fun reloadAndUpdate() {
-        if (!HandlerUtils.checkWorkerThread()) {
-            HandlerUtils.postWorker {
-                reloadAndUpdate()
-            }
-            return
-        }
-        XPLogUtils.log("start reload prefs")
-        prefs.reload()
-
-        XPLogUtils.devMode = isDevMode
-
-        updater.finishUpdate(getPrefsSnapshot())
     }
 
     private fun postNotifyReloadListener() {

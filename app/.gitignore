@@ -1,1 +1,5 @@
 /build
+
+**/assets/lspatch
+
+**/jniLibs/**/*.so

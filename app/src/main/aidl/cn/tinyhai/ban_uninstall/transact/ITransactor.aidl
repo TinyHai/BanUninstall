@@ -21,4 +21,8 @@ interface ITransactor {
     oneway void reloadPrefs();
 
     IBinder getAuth();
+
+    int getActiveMode();
+
+    boolean syncPrefs(in Map prefs);
 }

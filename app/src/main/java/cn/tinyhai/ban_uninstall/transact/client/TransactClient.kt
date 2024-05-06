@@ -8,75 +8,72 @@ import android.os.IBinder
 import android.util.Log
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.MainActivity
-import cn.tinyhai.ban_uninstall.auth.IAuth
-import cn.tinyhai.ban_uninstall.auth.client.AuthClient
 import cn.tinyhai.ban_uninstall.transact.ITransactor
-import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.utils.XPLogUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import rikka.parcelablelist.ParcelableListSlice
 
 class TransactClient(
-    private var remote: ITransactor
-) : IBinder.DeathRecipient {
+    private var service: ITransactor
+) : ITransactor, IBinder.DeathRecipient {
 
     init {
-        remote.asBinder()?.linkToDeath(this, 0)
-        remote.onAppLaunched()
+        service.asBinder()?.linkToDeath(this, 0)
+        service.onAppLaunched()
     }
 
-    private val outputList: MutableList<String> = arrayListOf()
-        get() {
-            field.clear()
-            return field
-        }
-
-    suspend fun fetchInstalledPackages(): List<PackageInfo> = withContext(Dispatchers.IO) {
-        remote.packages.list ?: emptyList()
+    override fun getPackages(): ParcelableListSlice<PackageInfo> {
+        return service.packages ?: ParcelableListSlice(emptyList())
     }
 
-    suspend fun fetchAllBannedPackages() = withContext(Dispatchers.IO) {
-        remote.allBannedPackages?.map { PkgInfo(it) } ?: emptyList()
+    override fun banPackage(
+        packageNames: List<String>,
+        bannedPackages: MutableList<String>
+    ) {
+        service.banPackage(packageNames, bannedPackages)
     }
 
-    suspend fun banPackage(pkgInfos: List<PkgInfo>): List<PkgInfo> {
-        val output = outputList
-        withContext(Dispatchers.IO) {
-            remote.banPackage(pkgInfos.map { it.toString() }, output)
-        }
-        return output.map { PkgInfo(it) }
+    override fun freePackage(
+        packageNames: List<String>,
+        freedPackages: MutableList<String>
+    ) {
+        service.freePackage(packageNames, freedPackages)
     }
 
-    suspend fun freePackage(pkgInfos: List<PkgInfo>): List<PkgInfo> {
-        val output = outputList
-        withContext(Dispatchers.IO) {
-            remote.freePackage(pkgInfos.map { it.toString() }, output)
-        }
-        return output.map { PkgInfo(it) }
+    override fun asBinder(): IBinder? {
+        return service.asBinder()
     }
 
-    suspend fun sayHello(hello: String): String = withContext(Dispatchers.IO) {
-        remote.sayHello(hello) ?: ""
+    override fun getAllBannedPackages(): List<String> {
+        return service.allBannedPackages ?: emptyList()
     }
 
-    fun onAppLaunched() {
-        remote.onAppLaunched()
+    override fun getAuth(): IBinder? {
+        return service.auth
     }
 
-    fun reloadPrefs() {
-        remote.reloadPrefs()
+    override fun getActiveMode(): Int {
+        return service.activeMode
     }
 
-    fun getAuthClient(): AuthClient {
-        val remoteAuth = remote.auth?.let {
-            IAuth.Stub.asInterface(it)
-        } ?: IAuth.Default()
-        return AuthClient(remoteAuth)
+    override fun syncPrefs(prefs: Map<Any?, Any?>?): Boolean {
+        return service.syncPrefs(prefs)
+    }
+
+    override fun sayHello(hello: String): String {
+        return service.sayHello(hello) ?: ""
+    }
+
+    override fun onAppLaunched() {
+        service.onAppLaunched()
+    }
+
+    override fun reloadPrefs() {
+        service.reloadPrefs()
     }
 
     override fun binderDied() {
-        remote.asBinder()?.unlinkToDeath(this, 0)
-        remote = ITransactor.Default()
+        service.asBinder()?.unlinkToDeath(this, 0)
+        service = ITransactor.Default()
     }
 
     companion object {
@@ -84,28 +81,28 @@ class TransactClient(
 
         private const val KEY_TRANSACT = "key_transact"
 
-        private lateinit var client: TransactClient
+        private var client: TransactClient? = null
+
+        private val Dummy = TransactClient(ITransactor.Default())
 
         operator fun invoke(): TransactClient {
-            return client
+            return client ?: Dummy
         }
 
         fun inject(intent: Intent) {
             val binder = intent.extras?.getBinder(KEY_TRANSACT)
             Log.d(TAG, "$binder")
-            val remote = if (binder != null) {
-                ITransactor.Stub.asInterface(binder)
-            } else {
-                ITransactor.Default()
+            if (binder != null) {
+                client?.binderDied()
+                client = TransactClient(ITransactor.Stub.asInterface(binder))
             }
-            client = TransactClient(remote).also { it.onAppLaunched() }
         }
 
         private fun ComponentName.isSelf(): Boolean {
             return packageName == BuildConfig.APPLICATION_ID && className == MainActivity::class.qualifiedName
         }
 
-        fun injectBinderIfNeeded(remote: ITransactor.Stub, intent: Intent, userId: Int) {
+        fun injectBinderIfNeeded(service: ITransactor.Stub, intent: Intent, userId: Int) {
             val component = intent.component ?: return
             if (component.isSelf()) {
                 if (userId > 0) {
@@ -113,7 +110,7 @@ class TransactClient(
                     return
                 }
                 val bundle = Bundle().apply {
-                    putBinder(KEY_TRANSACT, remote.asBinder())
+                    putBinder(KEY_TRANSACT, service.asBinder())
                 }
                 intent.apply {
                     putExtras(bundle)

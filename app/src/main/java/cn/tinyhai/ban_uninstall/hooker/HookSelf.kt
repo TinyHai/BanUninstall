@@ -10,15 +10,14 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
 import java.io.File
 
 @HookScope(
-    "cn.tinyhai.ban_uninstall",
-    "cn.tinyhai.ban_uninstall"
+    PKG_SELF,
+    PKG_SELF
 )
 class HookSelf(
     private val logger: XPLogger
 ) {
 
     companion object {
-        private const val ID_GET_XP_TAG = "get_xp_tag"
         private const val ID_CHECK_MODE = "check_mode"
         private const val ID_GET_PREF_DIR = "get_pref_dir"
     }
@@ -40,27 +39,6 @@ class HookSelf(
             ID_GET_PREF_DIR -> XposedBridge.getXposedVersion() > 92
             else -> true
         }
-    }
-
-    @HookerId(ID_GET_XP_TAG)
-    @MethodHooker(
-        className = "cn.tinyhai.ban_uninstall.App",
-        methodName = "getXpTag",
-        hookType = HookType.ReplaceMethod
-    )
-    fun replaceGetXpTag(param: MethodHookParam): Any? {
-        val xpTag = try {
-            val tag = XposedBridge::class.java.getDeclaredField("TAG").get(null)?.toString()
-            when (tag) {
-                "LSPosed-Bridge" -> "LSPosed"
-                "Xposed" -> tag
-                else -> "Unknown"
-            }
-        } catch (th: Throwable) {
-            logger.error(th)
-            "Unknown"
-        }
-        return xpTag
     }
 
     @Oneshot(unhookable = true)

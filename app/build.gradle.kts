@@ -17,6 +17,8 @@ fun String.execute(): String {
     return String(byteOut.toByteArray()).trim()
 }
 
+val allArch = arrayOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+
 android {
     namespace = "cn.tinyhai.ban_uninstall"
     compileSdk = 34
@@ -41,6 +43,9 @@ android {
     }
 
     buildTypes {
+//        debug {
+//            signingConfig = signingConfigs.getByName("release")
+//        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -49,6 +54,36 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
             versionNameSuffix = "-${"git rev-parse --verify --short HEAD".execute()}"
+        }
+
+        register("universal") {
+            initWith(getByName("release"))
+            versionNameSuffix = "${versionNameSuffix}_universal"
+            ndk {
+                abiFilters.clear()
+                abiFilters += arrayOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            }
+        }
+
+        allArch.forEach { arch ->
+            register(arch) {
+                initWith(getByName("release"))
+                versionNameSuffix = "${versionNameSuffix}_$arch"
+                ndk {
+                    abiFilters.clear()
+                    abiFilters += arch
+                }
+            }
+        }
+
+        all {
+            matchingFallbacks += "release"
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 
@@ -75,45 +110,81 @@ afterEvaluate {
         val flavor = flavorName
         val versionCode = versionCode
         val versionName = this.versionName
-        val renameTaskName =
-            "rename${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}Output"
-        tasks.register(renameTaskName) {
-            val apkName = buildString {
-                append("app")
-                if (flavor.isNotBlank()) {
-                    append("-$flavor")
-                }
-                append("-$buildType")
-                append(".apk")
+
+        val apkName = buildString {
+            append("app")
+            if (flavor.isNotBlank()) {
+                append("-$flavor")
             }
-            val newApkName = "${rootProject.name}_$versionName.apk"
-            val apkPath = buildString {
-                append(layout.buildDirectory.asFile.get().path)
-                append("/outputs/apk/")
-                if (flavor.isNotBlank()) {
-                    append("$flavor/")
-                }
-                append(buildType)
-            }
-            val apkFile = File(apkPath, apkName)
-            doLast {
-                apkFile.renameTo(File(apkPath, newApkName))
-                val versionCodeFile = File(apkPath, "versionCode")
-                    .apply { if (!exists()) createNewFile() }
-                versionCodeFile.bufferedWriter().use {
-                    it.append(versionCode.toString())
-                    it.flush()
-                }
-                val versionNameFile = File(apkPath, "versionName")
-                    .apply { if (!exists()) createNewFile() }
-                versionNameFile.bufferedWriter().use {
-                    it.append(versionName)
-                    it.flush()
-                }
-            }
+            append("-$buildType")
+            append(".apk")
         }
-        tasks.findByName("assemble${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}")
-            ?.finalizedBy(renameTaskName)
+        val newApkName = "${rootProject.name}_$versionName.apk"
+        val apkPath = buildString {
+            append(layout.buildDirectory.asFile.get().path)
+            append("/outputs/apk/")
+            if (flavor.isNotBlank()) {
+                append("$flavor/")
+            }
+            append(buildType)
+        }
+        val apkFile = File(apkPath, apkName)
+
+        val renameTask =
+            tasks.register("rename${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}Output") {
+                doLast {
+                    apkFile.renameTo(File(apkPath, newApkName))
+                }
+            }
+
+        val assembleTask =
+            tasks.findByName("assemble${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}")
+        assembleTask?.finalizedBy(renameTask)
+
+        when (buildType) {
+            "release", "debug" -> {
+                assembleTask?.doLast {
+                    val versionCodeFile = File(apkPath, "versionCode")
+                        .apply { if (!exists()) createNewFile() }
+                    versionCodeFile.bufferedWriter().use {
+                        it.append(versionCode.toString())
+                        it.flush()
+                    }
+                    val versionNameFile = File(apkPath, "versionName")
+                        .apply { if (!exists()) createNewFile() }
+                    versionNameFile.bufferedWriter().use {
+                        it.append(versionName)
+                        it.flush()
+                    }
+                }
+
+                tasks.findByName("strip${buildType.uppercaseFirstChar()}DebugSymbols")?.doLast {
+                    file(this.outputs.files.asPath).let { if (it.exists()) it.deleteRecursively() }
+                }
+
+                tasks.findByName("merge${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}Assets")
+                    ?.doLast {
+                        val lspatchDir = file(this.outputs.files.asPath).resolve("lspatch")
+                        if (lspatchDir.exists()) {
+                            lspatchDir.deleteRecursively()
+                        }
+                    }
+            }
+
+            in allArch -> {
+                tasks.findByName("merge${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}Assets")
+                    ?.doLast {
+                        val soDir = file(this.outputs.files.asPath).resolve("lspatch").resolve("so")
+                        soDir.listFiles()?.filter { it.isDirectory }?.forEach {
+                            if (it.name != buildType) {
+                                it.deleteRecursively()
+                            }
+                        }
+                    }
+            }
+
+            "universal" -> {}
+        }
     }
 }
 
@@ -134,6 +205,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.compose.destinations.core)
     implementation(libs.compose.destinations.bottomsheet)
+    implementation(libs.libsu.core)
     implementation("com.github.TinyHai:ComposeDragDrop:dev-SNAPSHOT")
     implementation(project(":hook"))
     ksp(project(":processor"))

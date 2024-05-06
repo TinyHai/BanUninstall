@@ -24,6 +24,7 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.withResumed
 import cn.tinyhai.ban_uninstall.R
+import cn.tinyhai.ban_uninstall.ui.component.rememberConfirmDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberSetPwdDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberVerifyPwdDialog
 import cn.tinyhai.ban_uninstall.vm.MainState
@@ -43,12 +44,6 @@ import kotlin.math.roundToInt
 @Composable
 fun MainScreen(navigator: DestinationsNavigator) {
     val viewModel: MainViewModel = viewModel()
-    val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(lifecycleOwner, viewModel) {
-        lifecycleOwner.withResumed {
-            viewModel.notifyReloadIfNeeded()
-        }
-    }
     val state by viewModel.state.collectAsState()
     Scaffold(
         topBar = {
@@ -71,31 +66,7 @@ fun MainScreen(navigator: DestinationsNavigator) {
                             IconButton(onClick = { viewModel.sayHello() }) {
                                 Icon(
                                     Icons.Outlined.Sms,
-                                    contentDescription = stringResource(R.string.icon_description_sync)
-                                )
-                            }
-                        }
-                        TooltipBox(
-                            positionProvider = rememberTooltipPositionProvider(),
-                            tooltip = {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    shape = RoundedCornerShape(4.dp),
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.icon_description_sync),
-                                        modifier = Modifier.padding(4.dp)
-                                    )
-                                }
-                            },
-                            state = rememberTooltipState()
-                        ) {
-                            IconButton(
-                                onClick = { viewModel.notifyReloadIfNeeded() }
-                            ) {
-                                Icon(
-                                    Icons.Outlined.Sync,
-                                    contentDescription = stringResource(R.string.icon_description_sync)
+                                    contentDescription = stringResource(R.string.icon_description_say_hello)
                                 )
                             }
                         }
@@ -106,6 +77,8 @@ fun MainScreen(navigator: DestinationsNavigator) {
     ) {
         MainScreenContent(
             state = state,
+            hasRoot = viewModel::hasRoot,
+            onActiveWithRoot = viewModel::onActiveWithRoot,
             onBanUninstall = viewModel::onBanUninstall,
             onBanClearData = viewModel::onBanClearData,
             onDevMode = viewModel::onDevMode,
@@ -125,6 +98,8 @@ fun MainScreen(navigator: DestinationsNavigator) {
 @Composable
 private fun MainScreenContent(
     state: MainState,
+    hasRoot: () -> Boolean,
+    onActiveWithRoot: () -> Unit,
     onBanUninstall: (Boolean) -> Unit,
     onBanClearData: (Boolean) -> Unit,
     onDevMode: (Boolean) -> Unit,
@@ -137,7 +112,7 @@ private fun MainScreenContent(
     modifier: Modifier = Modifier
 ) {
     Column(modifier) {
-        StatusGroup(state)
+        StatusGroup(state, hasRoot, onActiveWithRoot)
         FunctionGroup(state, onVerifyPwd, onBanUninstall, onBanClearData, onDevMode)
         AdvanceGroup(state, onVerifyPwd, onUseBannedList, gotoBannedApp)
         SecurityGroup(state, onShowConfirm, onVerifyPwd, onSetPwd, onClearPwd)
@@ -198,15 +173,17 @@ private fun FunctionGroup(
 }
 
 @Composable
-private fun StatusGroup(state: MainState) {
+private fun StatusGroup(state: MainState, hasRoot: () -> Boolean, onActiveWithRoot: () -> Unit) {
+    val activeWithRootDialog = rememberConfirmDialog(title = "提示", content = "使用Root激活")
+    val scope = rememberCoroutineScope()
     SettingsGroup(
         title = {
             Text(text = stringResource(R.string.group_title_module_status))
         }
     ) {
-        val context = LocalContext.current
         val moduleStatus =
             stringResource(if (state.isActive) R.string.module_status_active else R.string.module_status_disable)
+        val context = LocalContext.current
         SettingsMenuLink(
             icon = {
                 Icon(
@@ -222,13 +199,21 @@ private fun StatusGroup(state: MainState) {
                     Text(
                         text = stringResource(
                             id = R.string.module_active_mode,
-                            state.xpTag
+                            state.activeMode.description
                         ).format()
                     )
                 }
             }
         ) {
-            Toast.makeText(context, moduleStatus, Toast.LENGTH_SHORT).show()
+            if (state.isActive) {
+                Toast.makeText(context, moduleStatus, Toast.LENGTH_SHORT).show()
+                return@SettingsMenuLink
+            }
+            scope.launch {
+                if (hasRoot() && activeWithRootDialog.showConfirm()) {
+                    onActiveWithRoot()
+                }
+            }
         }
     }
 }

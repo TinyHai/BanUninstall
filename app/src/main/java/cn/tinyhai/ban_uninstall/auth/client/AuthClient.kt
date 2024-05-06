@@ -3,6 +3,7 @@ package cn.tinyhai.ban_uninstall.auth.client
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
+import android.os.IBinder
 import android.os.IBinder.DeathRecipient
 import android.util.Log
 import cn.tinyhai.ban_uninstall.AuthActivity
@@ -12,36 +13,39 @@ import cn.tinyhai.ban_uninstall.auth.entites.AuthData
 import java.security.MessageDigest
 
 class AuthClient(
-    private var remote: IAuth
-) : DeathRecipient {
-
-    val isAlive get() = remote.asBinder()?.isBinderAlive == true
+    private var service: IAuth
+) : IAuth, DeathRecipient {
 
     init {
-        remote.asBinder()?.linkToDeath(this, 0)
+        service.asBinder()?.linkToDeath(this, 0)
     }
 
-    val hasPwd: Boolean
-        get() = remote.hasPwd()
-
-    fun setPwd(newPwd: String) {
-        remote.setPwd(newPwd.toSha256())
+    override fun asBinder(): IBinder? {
+        return service.asBinder()
     }
 
-    fun clearPwd() {
-        remote.clearPwd()
+    override fun hasPwd(): Boolean {
+        return service.hasPwd()
     }
 
-    fun authenticate(pwd: String): Boolean {
-        return remote.authenticate(pwd.toSha256())
+    override fun setPwd(newPwd: String) {
+        service.setPwd(newPwd.toSha256())
     }
 
-    fun agree(opId: Int) {
-        remote.agree(opId)
+    override fun clearPwd() {
+        service.clearPwd()
     }
 
-    fun prevent(opId: Int) {
-        remote.prevent(opId)
+    override fun authenticate(pwd: String): Boolean {
+        return service.authenticate(pwd.toSha256())
+    }
+
+    override fun agree(opId: Int) {
+        service.agree(opId)
+    }
+
+    override fun prevent(opId: Int) {
+        service.prevent(opId)
     }
 
     @OptIn(ExperimentalStdlibApi::class)
@@ -57,8 +61,8 @@ class AuthClient(
     }
 
     override fun binderDied() {
-        remote.asBinder()?.unlinkToDeath(this, 0)
-        remote = IAuth.Default()
+        service.asBinder()?.unlinkToDeath(this, 0)
+        service = IAuth.Default()
     }
 
     companion object {
@@ -67,18 +71,26 @@ class AuthClient(
 
         private const val KEY_AUTH_DATA = "key_auth_data"
 
-        fun parseFromIntent(intent: Intent): AuthClient {
-            val binder = intent.extras?.getBinder(KEY_AUTH)
-            Log.d(TAG, "$binder")
-            val remote = if (binder?.isBinderAlive == true) {
-                IAuth.Stub.asInterface(binder)
-            } else {
-                IAuth.Default()
-            }
-            return AuthClient(remote)
+        private var client: AuthClient? = null
+
+        private val Dummy = AuthClient(IAuth.Default())
+
+        val AuthClient.isDummy get() = this === Dummy
+
+        operator fun invoke(): AuthClient {
+            return client ?: Dummy
         }
 
-        fun getAuthData(intent: Intent): AuthData {
+        fun inject(intent: Intent) {
+            val binder = intent.extras?.getBinder(KEY_AUTH)
+            Log.d(TAG, "$binder")
+            if (binder != null) {
+                client?.binderDied()
+                client = AuthClient(IAuth.Stub.asInterface(binder))
+            }
+        }
+
+        fun parseAuthData(intent: Intent): AuthData {
             return intent.getParcelableExtra(KEY_AUTH_DATA) ?: AuthData.Empty
         }
 
@@ -91,7 +103,11 @@ class AuthClient(
             return Intent().apply {
                 setComponent(component)
                 putExtras(bundle)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or Intent.FLAG_ACTIVITY_NO_HISTORY)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK
+                        or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                        or Intent.FLAG_ACTIVITY_NO_HISTORY
+                )
             }
         }
     }

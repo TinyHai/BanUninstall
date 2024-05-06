@@ -1,6 +1,5 @@
 package cn.tinyhai.ban_uninstall.hooker
 
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.IPackageDataObserver
@@ -12,11 +11,11 @@ import android.os.Handler
 import android.os.Process
 import androidx.annotation.RequiresApi
 import cn.tinyhai.ban_uninstall.App
+import cn.tinyhai.ban_uninstall.XposedInit
 import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
-import cn.tinyhai.ban_uninstall.utils.SystemContextHolder
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
 import cn.tinyhai.xp.annotation.*
 import cn.tinyhai.xp.hook.Hooker
@@ -24,12 +23,11 @@ import cn.tinyhai.xp.hook.UnhookableHooker
 import cn.tinyhai.xp.hook.logger.XPLogger
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 @HookScope(
-    targetPackageName = "android",
-    targetProcessName = "android",
+    targetPackageName = PKG_ANDROID,
+    targetProcessName = PKG_ANDROID,
     isUnhookable = true
 )
 class HookSystem(
@@ -47,8 +45,8 @@ class HookSystem(
         logger.info("OS Version: ${Build.VERSION.SDK_INT}")
         logger.info("OS Manufacturer: ${Build.MANUFACTURER}")
         logger.info("OS Model: ${Build.MODEL}")
+        logger.info("ActiveMode: ${XposedInit.activeMode.name}")
         logger.info("XP Version: ${XposedBridge.getXposedVersion()}")
-        XSharedPrefs.init()
         XSharedPrefs.registerPrefsChangeListener {
             logger.info("prefs reloaded")
             (hooker as? UnhookableHooker)?.let {
@@ -64,75 +62,6 @@ class HookSystem(
             App.SP_KEY_BAN_UNINSTALL -> XSharedPrefs.isBanUninstall
             App.SP_KEY_BAN_CLEAR_DATA -> XSharedPrefs.isBanClearData
             else -> false
-        }
-    }
-
-    @Oneshot
-    @MethodHooker(
-        className = "android.app.servertransaction.LaunchActivityItem",
-        methodName = "obtain",
-        hookType = HookType.BeforeMethod,
-        minSdkInclusive = Build.VERSION_CODES.P
-    )
-    fun beforeObtain(param: MethodHookParam) {
-        val intent = param.args[0] as Intent
-        val aInfo = param.args[2] as ActivityInfo
-        val userId = aInfo.applicationInfo.uid / 100_000
-        TransactClient.injectBinderIfNeeded(TransactService, intent, userId)
-    }
-
-    @Oneshot
-    @MethodHooker(
-        className = "android.app.IApplicationThread\$Stub\$Proxy",
-        methodName = "scheduleLaunchActivity",
-        hookType = HookType.BeforeMethod,
-        minSdkInclusive = Build.VERSION_CODES.O,
-        maxSdkExclusive = Build.VERSION_CODES.P
-    )
-    fun beforeScheduleLaunchActivity0(param: MethodHookParam) {
-        beforeScheduleLaunchActivity(param)
-    }
-
-    @Oneshot
-    @MethodHooker(
-        className = "android.app.ApplicationThreadNative",
-        methodName = "scheduleLaunchActivity",
-        hookType = HookType.BeforeMethod,
-        maxSdkExclusive = Build.VERSION_CODES.O
-    )
-    fun beforeScheduleLaunchActivity1(param: MethodHookParam) {
-        beforeScheduleLaunchActivity(param)
-    }
-
-    private fun beforeScheduleLaunchActivity(param: MethodHookParam) {
-        val intent = param.args[0] as Intent
-        val aInfo = param.args[3] as ActivityInfo
-        val userId = aInfo.applicationInfo.uid / 100_000
-        TransactClient.injectBinderIfNeeded(TransactService, intent, userId)
-    }
-
-    @Oneshot(unhookable = true)
-    @MethodHooker(
-        className = "com.android.server.SystemServiceManager",
-        methodName = "startBootPhase",
-        hookType = HookType.AfterMethod
-    )
-    fun afterStartBootPhase(param: MethodHookParam, unhook: () -> Unit) {
-        val phase = param.args.lastOrNull() as? Int ?: 0
-        if (phase == 1000 /* PHASE_BOOT_COMPLETED */) {
-            TransactService.onSystemBootCompleted()
-            val activityThread =
-                XposedHelpers.findClass("android.app.ActivityThread", lp.classLoader)
-                    .getDeclaredField("sCurrentActivityThread")
-                    .also { it.isAccessible = true }.get(null)
-            val systemContext =
-                activityThread::class.java.getDeclaredField("mSystemContext")
-                    .also { it.isAccessible = true }.get(activityThread) as? Context
-            logger.info("systemContext: $systemContext")
-            systemContext?.let {
-                SystemContextHolder.onSystemContext(it)
-            }
-            unhook()
         }
     }
 

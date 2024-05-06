@@ -37,6 +37,81 @@ interface VerifyPwdDialogHandle : ConfirmDialogHandle {
 }
 
 @Composable
+fun rememberConfirmDialog(
+    title: String,
+    content: String,
+): ConfirmDialogHandle {
+    val showDialog = rememberSaveable {
+        mutableStateOf(false)
+    }
+    val result = remember {
+        Channel<Boolean>()
+    }
+    val scope = rememberCoroutineScope()
+    val handle = remember {
+        object : ConfirmDialogHandle {
+            override fun show() {
+                showDialog.value = true
+            }
+
+            override fun dismiss() {
+                showDialog.value = false
+            }
+
+            override suspend fun showConfirm(): Boolean {
+                show()
+                return result.receive().also {
+                    dismiss()
+                }
+            }
+        }
+    }
+    val dialogComposable = @Composable {
+        if (showDialog.value) {
+            ConfirmDialog(
+                title,
+                content,
+                onCancel = {
+                    scope.launch {
+                        result.send(false)
+                    }
+                },
+                onConfirm = {
+                    scope.launch {
+                        result.send(true)
+                    }
+                }
+            )
+        }
+    }
+    dialogComposable()
+    return handle
+}
+
+@Composable
+fun ConfirmDialog(title: String, content: String, onConfirm: () -> Unit, onCancel: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { },
+        dismissButton = {
+            TextButton(onClick = onCancel) {
+                Text(text = stringResource(id = android.R.string.cancel))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(text = stringResource(id = android.R.string.ok))
+            }
+        },
+        title = {
+            Text(text = title)
+        },
+        text = {
+            Text(text = content)
+        }
+    )
+}
+
+@Composable
 fun rememberVerifyPwdDialog(
     title: String,
     errorText: String,

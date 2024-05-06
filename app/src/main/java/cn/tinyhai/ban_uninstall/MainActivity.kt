@@ -1,5 +1,6 @@
 package cn.tinyhai.ban_uninstall
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -14,7 +15,7 @@ import com.ramcosta.composedestinations.generated.NavGraphs
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("MainActivity", intent.toString())
+        Log.i("MainActivity", intent.toString())
         TransactClient.inject(intent)
         enableEdgeToEdge()
         setContent {
@@ -26,6 +27,15 @@ class MainActivity : ComponentActivity() {
                     DestinationsNavHost(NavGraphs.root)
                 }
             }
+        }
+    }
+
+    companion object {
+        fun restart() {
+            val intent = Intent(App.app, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
+            App.app.startActivity(intent)
         }
     }
 }
