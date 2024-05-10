@@ -17,7 +17,7 @@ fun String.execute(): String {
     return String(byteOut.toByteArray()).trim()
 }
 
-val allArch = arrayOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+val allArch: Array<String> by rootProject.ext
 
 android {
     namespace = "cn.tinyhai.ban_uninstall"
@@ -43,9 +43,9 @@ android {
     }
 
     buildTypes {
-//        debug {
-//            signingConfig = signingConfigs.getByName("release")
-//        }
+        debug {
+            versionNameSuffix = "-${"git rev-parse --verify --short HEAD".execute()}_debug"
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(
@@ -56,22 +56,18 @@ android {
             versionNameSuffix = "-${"git rev-parse --verify --short HEAD".execute()}"
         }
 
-        register("universal") {
-            initWith(getByName("release"))
-            versionNameSuffix = "${versionNameSuffix}_universal"
-            ndk {
-                abiFilters.clear()
-                abiFilters += arrayOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
-            }
-        }
-
         allArch.forEach { arch ->
             register(arch) {
                 initWith(getByName("release"))
                 versionNameSuffix = "${versionNameSuffix}_$arch"
                 ndk {
                     abiFilters.clear()
-                    abiFilters += arch
+                    abiFilters += if (arch == "universal") arrayOf(
+                        "arm64-v8a",
+                        "armeabi-v7a",
+                        "x86",
+                        "x86_64"
+                    ) else arrayOf(arch)
                 }
             }
         }
