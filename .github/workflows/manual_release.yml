@@ -151,7 +151,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          ./gradlew clean assembleRelease
+          ./gradlew clean assemble
 
       - name: Generate tag name
         run: |
@@ -174,7 +174,7 @@ jobs:
           token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
           draft: true
           files: |
-            !app/build/outputs/apk/debug/*
+            !app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/**/*.apk
 
       - name: Release to xposed module repository
