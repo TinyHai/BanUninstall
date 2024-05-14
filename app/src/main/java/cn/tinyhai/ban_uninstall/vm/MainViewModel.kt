@@ -69,11 +69,12 @@ private class Ticker(
     private var firstTickMs = 0L
 
     fun increaseTick() {
+        resetTickIfTimeout()
+
         if (tick == 0) {
             firstTick()
-        } else {
-            resetTickIfTimeout()
         }
+
         tick += 1
         afterIncreaseTick()
     }
