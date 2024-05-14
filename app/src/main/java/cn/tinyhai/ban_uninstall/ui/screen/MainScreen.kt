@@ -11,19 +11,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Sms
-import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.withResumed
 import cn.tinyhai.ban_uninstall.R
+import cn.tinyhai.ban_uninstall.transact.entities.ActiveMode
 import cn.tinyhai.ban_uninstall.ui.component.rememberConfirmDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberSetPwdDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberVerifyPwdDialog
@@ -81,6 +79,7 @@ fun MainScreen(navigator: DestinationsNavigator) {
             onActiveWithRoot = viewModel::onActiveWithRoot,
             onBanUninstall = viewModel::onBanUninstall,
             onBanClearData = viewModel::onBanClearData,
+            onAutoStart = viewModel::onAutoStart,
             onDevMode = viewModel::onDevMode,
             onUseBannedList = viewModel::onUseBannedList,
             gotoBannedApp = { navigator.navigate(BannedAppScreenDestination()) },
@@ -102,6 +101,7 @@ private fun MainScreenContent(
     onActiveWithRoot: () -> Unit,
     onBanUninstall: (Boolean) -> Unit,
     onBanClearData: (Boolean) -> Unit,
+    onAutoStart: (Boolean) -> Unit,
     onDevMode: (Boolean) -> Unit,
     onUseBannedList: (Boolean) -> Unit,
     gotoBannedApp: () -> Unit,
@@ -113,7 +113,7 @@ private fun MainScreenContent(
 ) {
     Column(modifier) {
         StatusGroup(state, hasRoot, onActiveWithRoot)
-        FunctionGroup(state, onVerifyPwd, onBanUninstall, onBanClearData, onDevMode)
+        FunctionGroup(state, onVerifyPwd, onBanUninstall, onBanClearData, onAutoStart, onDevMode)
         AdvanceGroup(state, onVerifyPwd, onUseBannedList, gotoBannedApp)
         SecurityGroup(state, onShowConfirm, onVerifyPwd, onSetPwd, onClearPwd)
     }
@@ -125,6 +125,7 @@ private fun FunctionGroup(
     onVerifyPwd: (String) -> Boolean,
     onBanUninstall: (Boolean) -> Unit,
     onBanClearData: (Boolean) -> Unit,
+    onAutoStart: (Boolean) -> Unit,
     onDevMode: (Boolean) -> Unit,
 ) {
     val verifyPwdDialogHandle = rememberVerifyPwdDialog(
@@ -162,6 +163,15 @@ private fun FunctionGroup(
                 onBanClearData(it)
             }
         }
+        if (state.activeMode == ActiveMode.Root) {
+            SettingsSwitch(
+                state = state.autoStart,
+                title = { Text(text = stringResource(R.string.switch_title_auto_start)) },
+                subtitle = { Text(text = stringResource(R.string.switch_subtitle_auto_start)) }
+            ) {
+                onAutoStart(it)
+            }
+        }
         SettingsSwitch(
             state = state.devMode,
             enabled = state.isActive,
@@ -174,7 +184,10 @@ private fun FunctionGroup(
 
 @Composable
 private fun StatusGroup(state: MainState, hasRoot: () -> Boolean, onActiveWithRoot: () -> Unit) {
-    val activeWithRootDialog = rememberConfirmDialog(title = "提示", content = "使用Root激活")
+    val activeWithRootDialog = rememberConfirmDialog(
+        title = stringResource(R.string.title_active_with_root),
+        content = stringResource(R.string.text_content_activate_with_root)
+    )
     val scope = rememberCoroutineScope()
     SettingsGroup(
         title = {

@@ -11,8 +11,8 @@
     <string name="switch_title_ban_uninstall">Ban uninstall apps</string>
     <string name="switch_title_ban_clear_data">Ban clear apps\' data</string>
     <string name="switch_title_dev_mode">Dev mode</string>
-    <string name="module_status_active">Actived</string>
-    <string name="module_status_disable">Disabled</string>
+    <string name="module_status_active">Working</string>
+    <string name="module_status_disable">Not Working</string>
     <string name="module_active_mode">Running on: %1$s</string>
     <string name="icon_description_sync">Sync configs to system</string>
     <string name="icon_description_say_hello">test msg</string>
@@ -50,4 +50,8 @@
     <string name="title_auth">Verification required</string>
     <string name="text_clear_the_app_data">clear data of %1$s</string>
     <string name="text_uninstall_the_app">uninstall %1$s</string>
+    <string name="switch_title_auto_start">Auto start</string>
+    <string name="switch_subtitle_auto_start">Auto activate with root after system boot completed</string>
+    <string name="title_active_with_root">Activate With Root</string>
+    <string name="text_content_activate_with_root">Do you want to activate it with root right now?</string>
 </resources>

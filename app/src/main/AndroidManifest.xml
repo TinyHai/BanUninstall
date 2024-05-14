@@ -4,6 +4,10 @@
 
     <uses-sdk tools:overrideLibrary="cn.tinyhai.compose.dragdrop" />
 
+    <uses-permission
+        android:name="android.permission.RECEIVE_BOOT_COMPLETED"
+        android:required="false" />
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -46,6 +50,16 @@
             android:noHistory="true"
             android:taskAffinity=".Auth"
             android:theme="@style/Theme.AppCompat.DayNight.Dialog" />
+
+        <receiver
+            android:name=".receiver.BootCompletedReceiver"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

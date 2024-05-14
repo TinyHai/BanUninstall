@@ -74,6 +74,11 @@ android {
 
         all {
             matchingFallbacks += "release"
+            val fieldValue = when (this.name) {
+                "debug", in allArch -> "true"
+                else -> "false"
+            }
+            buildConfigField("boolean", "ROOT_FEATURE", fieldValue)
         }
     }
 
@@ -138,7 +143,7 @@ afterEvaluate {
         assembleTask?.finalizedBy(renameTask)
 
         when (buildType) {
-            "release", "debug" -> {
+            "release" -> {
                 assembleTask?.doLast {
                     val versionCodeFile = File(apkPath, "versionCode")
                         .apply { if (!exists()) createNewFile() }
@@ -179,7 +184,7 @@ afterEvaluate {
                     }
             }
 
-            "universal" -> {}
+            "universal", "debug" -> {}
         }
     }
 }

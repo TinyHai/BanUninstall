@@ -21,9 +21,11 @@ class App : Application() {
 
         var isPrefsWorldReadable = false
 
+        private var prefs: SharedPreferences? = null
+
         @SuppressLint("WorldReadableFiles")
         fun getPrefs(activeMode: ActiveMode): SharedPreferences {
-            return when (activeMode) {
+            return prefs ?: when (activeMode) {
                 ActiveMode.Disabled, ActiveMode.Root -> app.getSharedPreferences(
                     SP_FILE_NAME,
                     Context.MODE_PRIVATE
@@ -36,7 +38,7 @@ class App : Application() {
                 }.getOrElse {
                     app.getSharedPreferences(SP_FILE_NAME, Context.MODE_PRIVATE)
                 }
-            }
+            }.also { prefs = it }
         }
     }
 

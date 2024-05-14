@@ -1,13 +1,10 @@
 package cn.tinyhai.ban_uninstall.hooker
 
-import android.system.Os
-import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.xp.annotation.*
 import cn.tinyhai.xp.hook.logger.XPLogger
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
-import java.io.File
 
 @HookScope(
     PKG_SELF,
@@ -19,7 +16,6 @@ class HookSelf(
 
     companion object {
         private const val ID_CHECK_MODE = "check_mode"
-        private const val ID_GET_PREF_DIR = "get_pref_dir"
     }
 
     private var skip = false
@@ -36,31 +32,7 @@ class HookSelf(
     fun isHookerEnable(id: String): Boolean {
         return !skip && when (id) {
             ID_CHECK_MODE -> XposedBridge.getXposedVersion() <= 92
-            ID_GET_PREF_DIR -> XposedBridge.getXposedVersion() > 92
-            else -> true
-        }
-    }
-
-    @Oneshot(unhookable = true)
-    @HookerId(ID_GET_PREF_DIR)
-    @MethodHooker(
-        className = "android.app.ContextImpl",
-        methodName = "getPreferencesDir",
-        hookType = HookType.AfterMethod
-    )
-    fun afterGetPreference(param: MethodHookParam, unhook: () -> Unit) {
-        val dir = param.result as? File ?: return
-        logger.info("file: ${dir.absoluteFile}")
-        if (dir.isDirectory && dir.name == BuildConfig.APPLICATION_ID) {
-            if (!dir.exists()) {
-                dir.mkdir()
-            }
-            val prev = Os.umask("777".toInt(8))
-            logger.info("prev umask: ${prev.toString(8).padStart(4, '0')}")
-            Os.chmod(dir.absolutePath, "715".toInt(8))
-            Os.umask(prev)
-            logger.info("set prefs dir world readable success")
-            unhook()
+            else -> false
         }
     }
 

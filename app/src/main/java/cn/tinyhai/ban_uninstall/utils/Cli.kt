@@ -1,6 +1,5 @@
 package cn.tinyhai.ban_uninstall.utils
 
-import android.os.Build
 import android.os.Environment
 import android.util.Log
 import cn.tinyhai.ban_uninstall.App
@@ -17,7 +16,7 @@ private const val TMP_PATH = "/data/local/tmp"
 
 private const val LSPATCH_PATH = "$TMP_PATH/lspatch"
 
-private val META_LOADER_LIB_PATH = "$LSPATCH_PATH/so/${Build.SUPPORTED_ABIS[0]}/libmeta_loader.so"
+private val META_LOADER_LIB_PATH = "$LSPATCH_PATH/so/${getCurrentAbi()}/libmeta_loader.so"
 
 private val nativeLibraryDir = App.app.applicationInfo.nativeLibraryDir
 
@@ -55,45 +54,58 @@ suspend fun fastResultWithShell(vararg cmd: String) = withContext(Dispatchers.IO
     }
 }
 
-suspend fun copyPatchToTmp() {
-    withContext(Dispatchers.IO) {
-        val cacheDir = App.app.cacheDir.absolutePath
-        App.app.assets.copyTo("lspatch", App.app.cacheDir.absolutePath)
-        val from = cacheDir + File.separator + "lspatch"
-        val to = "/data/local/tmp"
-        Shell.enableVerboseLogging = true
-        fastResultWithRootShell("cp", "-R", from, to)
-        fastResultWithRootShell("chown", "-R", "system:system", LSPATCH_PATH)
-        fastResultWithRootShell("chcon", "-R", "u:object_r:system_file:s0", LSPATCH_PATH)
-    }
+suspend fun tryToInjectIntoSystemServer(): Boolean {
+    return copyPatchToTmp() && copyPrefsToTmp(App.SP_FILE_NAME) && setFilesPermission() && injectSystemServer()
 }
 
-suspend fun makePrefsWorldReadable(filename: String) {
-    withContext(Dispatchers.IO) {
-        val prefName = filename.let { if (it.endsWith(".xml")) it else "$it.xml" }
-        val appDataDir =
-            Environment.getDataDirectory().absolutePath + File.separator + "data" + File.separator + BuildConfig.APPLICATION_ID
-        fastResultWithShell("chmod", "o+x", appDataDir)
-        val prefDir = appDataDir + File.separator + "shared_prefs"
-        fastResultWithShell("chmod", "o+x", prefDir)
-        val prefFile = prefDir + File.separator + prefName
-        fastResultWithShell("chmod", "o+r", prefFile)
-    }
+private suspend fun copyPatchToTmp() = withContext(Dispatchers.IO) {
+    val cacheDir = App.app.cacheDir.absolutePath
+    App.app.assets.copyTo("lspatch", App.app.cacheDir.absolutePath)
+    val from = cacheDir + File.separator + "lspatch"
+    val to = "/data/local/tmp"
+    Shell.enableVerboseLogging = true
+    fastResultWithRootShell("cp", "-R", from, to)
 }
 
-suspend fun injectSystemServer() {
-    withContext(Dispatchers.IO) {
-        fastResultWithRootShell(
-            injectToolPath,
-            "inject",
-            "-c",
-            "system_server",
-            "-s",
-            META_LOADER_LIB_PATH
-        ).let {
-            if (!it) {
-                Log.d(TAG, "inject failed")
-            }
-        }
+private suspend fun copyPrefsToTmp(filename: String) = withContext(Dispatchers.IO) {
+    val prefName = filename.let { if (it.endsWith(".xml")) it else "$it.xml" }
+    val appDataDir =
+        Environment.getDataDirectory().absolutePath + File.separator + "data" + File.separator + BuildConfig.APPLICATION_ID
+    val prefDir = appDataDir + File.separator + "shared_prefs"
+    val prefFile = prefDir + File.separator + prefName
+    fastResultWithRootShell("cp", prefFile, LSPATCH_PATH)
+}
+
+private suspend fun setFilesPermission() = withContext(Dispatchers.IO) {
+    fastResultWithRootShell(
+        "chown",
+        "-R",
+        "system:system",
+        LSPATCH_PATH
+    ) && fastResultWithRootShell("chcon", "-R", "u:object_r:system_file:s0", LSPATCH_PATH)
+}
+
+private suspend fun injectSystemServer() = withContext(Dispatchers.IO) {
+    fastResultWithRootShell(
+        injectToolPath,
+        "inject",
+        "-c",
+        "system_server",
+        "-s",
+        META_LOADER_LIB_PATH
+    )
+}
+
+private fun getCurrentAbi(): String {
+    val VMRuntime = Class.forName("dalvik.system.VMRuntime")
+    val getRuntime = VMRuntime.getDeclaredMethod("getRuntime")
+    getRuntime.isAccessible = true
+    val vmInstructionSet = VMRuntime.getDeclaredMethod("vmInstructionSet")
+    vmInstructionSet.isAccessible = true
+    val arch = vmInstructionSet.invoke(getRuntime.invoke(null)) as String
+    return when (arch) {
+        "arm" -> "armeabi-v7a"
+        "arm64" -> "arm64-v8a"
+        else -> arch
     }
 }

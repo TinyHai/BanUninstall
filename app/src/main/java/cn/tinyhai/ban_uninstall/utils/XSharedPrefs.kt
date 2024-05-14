@@ -64,6 +64,10 @@ private class MapPreferences(
     override fun unregisterOnSharedPreferenceChangeListener(listener: OnSharedPreferenceChangeListener?) {
         throw UnsupportedOperationException()
     }
+
+    override fun toString(): String {
+        return map.toString()
+    }
 }
 
 @SuppressLint("PrivateApi")
@@ -85,6 +89,9 @@ object XSharedPrefs {
     init {
         val xprefs = XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
         prefs = MapPreferences(xprefs.all)
+
+        XPLogUtils.log(xprefs.file.absolutePath)
+        XPLogUtils.log(prefs.toString())
 
         SystemContextHolder.registerCallback {
             onSystemContext(it)

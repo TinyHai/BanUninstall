@@ -19,8 +19,8 @@
     <string name="switch_title_use_separate_password">使用独立密码</string>
     <string name="menulink_title_banned_app">配置禁止应用</string>
     <string name="menulink_change_password">修改密码</string>
-    <string name="module_status_active">已激活</string>
-    <string name="module_status_disable">未激活</string>
+    <string name="module_status_active">工作中</string>
+    <string name="module_status_disable">未工作</string>
     <string name="module_active_mode">运行模式: %1$s</string>
     <string name="icon_description_sync">同步配置给系统</string>
     <string name="icon_description_say_hello">测试消息</string>
@@ -49,4 +49,8 @@
     <string name="title_set_password">设置密码</string>
     <string name="title_auth">需要验证</string>
     <string name="description_auth">请完成验证以允许%1$s</string>
+    <string name="switch_title_auto_start">自启动</string>
+    <string name="switch_subtitle_auto_start">在系统启动后自动通过Root激活</string>
+    <string name="title_active_with_root">使用Root激活</string>
+    <string name="text_content_activate_with_root">是否立即使用Root权限激活？</string>
 </resources>
