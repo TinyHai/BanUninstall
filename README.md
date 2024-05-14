@@ -1,8 +1,8 @@
 # BanUninstall
 
-一个禁止卸载和禁止清除用户数据的Xposed模块
+一个禁止卸载和禁止清除用户数据的Xposed模块 & 支持使用Root激活
 
-A Xposed Module that prevents apps be uninstall or apps' data be cleared
+A Xposed Module that prevents apps be uninstall or apps' data be cleared. Also support activate with root.
 
 ### Screenshots
 |                    1                     |                    2                     |                    3                     |
@@ -10,7 +10,13 @@ A Xposed Module that prevents apps be uninstall or apps' data be cleared
 | <img src="screenshots/screenshot1.jpg"/> | <img src="screenshots/screenshot2.jpg"/> | <img src="screenshots/screenshot3.jpg"/> |
 
 ### Compatibility
+Xposed:
+
 Android 5.0 - Android 14
+
+Root:
+
+Android 8.0 - Android 14
 
 I have tested with my phone on Android 14, and it works well. I can't ensure it works on your phone.
 
