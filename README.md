@@ -23,3 +23,6 @@ I have tested with my phone on Android 14, and it works well. I can't ensure it 
 **So before you use it, you must test it with an irrelevant app by yourself.**
 
 **I am not responsible for any data loss if you test it using an important app.**
+
+### Credits
+Activate with Root via [LSPatch](https://github.com/LSPosed/LSPatch)
