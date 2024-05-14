@@ -34,10 +34,6 @@ object AuthService : IAuth.Stub() {
         return helper.authenticate(sha256)
     }
 
-    fun onSelfRemoved() {
-        helper.clearAuth()
-    }
-
     fun showClearDataConfirm(
         onConfirm: () -> Unit,
         onCancel: () -> Unit,
@@ -46,7 +42,17 @@ object AuthService : IAuth.Stub() {
         callingPackageName: String
     ) {
         val opId = pendingOp.add(wrapWithPendingOp(onConfirm, onCancel))
-        startAuthActivity(opId, pkgInfo, OpType.ClearData, callingUid, callingPackageName)
+        kotlin.runCatching {
+            startAuthActivity(opId, pkgInfo, OpType.ClearData, callingUid, callingPackageName)
+        }.onSuccess {
+            if (!it) {
+                prevent(opId)
+            }
+        }.onFailure {
+            XPLogUtils.log(it)
+            XPLogUtils.log("!!!! what's wrong?")
+            prevent(opId)
+        }
     }
 
     fun showUninstallConfirm(
@@ -57,7 +63,17 @@ object AuthService : IAuth.Stub() {
         callingPackageName: String
     ) {
         val opId = pendingOp.add(wrapWithPendingOp(onConfirm, onCancel))
-        startAuthActivity(opId, pkgInfo, OpType.Uninstall, callingUid, callingPackageName)
+        runCatching {
+            startAuthActivity(opId, pkgInfo, OpType.Uninstall, callingUid, callingPackageName)
+        }.onSuccess {
+            if (!it) {
+                prevent(opId)
+            }
+        }.onFailure {
+            XPLogUtils.log(it)
+            XPLogUtils.log("maybe there is a sharedlibrary is being uninstall, just skip it")
+            agree(opId)
+        }
     }
 
     private fun startAuthActivity(
@@ -66,22 +82,21 @@ object AuthService : IAuth.Stub() {
         opType: OpType,
         callingUid: Int,
         callingPackageName: String
-    ) {
+    ): Boolean {
+        var success = false
         val ident = Binder.clearCallingIdentity()
         try {
             SystemContextHolder.withSystemContext {
                 val appInfo =
                     packageManager.getApplicationInfoAsUser(pkgInfo.packageName, 0, pkgInfo.userId)
-                if (appInfo == null) {
-                    XPLogUtils.log("!!!!! getApplicationInfo failed  $pkgInfo")
-                    return@withSystemContext
-                }
-                val callingAppInfo =
+
+                val callingAppInfo = runCatching {
                     packageManager.getApplicationInfoAsUser(
                         callingPackageName,
                         0,
                         callingUid / 100_000
                     )
+                }.getOrNull()
                 val authData = AuthData(
                     opId = opId,
                     opTypeOrdinal = opType.ordinal,
@@ -90,35 +105,35 @@ object AuthService : IAuth.Stub() {
                     appInfo = appInfo
                 )
                 val intent = AuthClient.buildAuthIntent(AuthService, authData)
-                startActivity(intent)
+                if (packageManager.resolveActivity(intent, 0) != null) {
+                    startActivity(intent)
+                    success = true
+                }
             }
         } finally {
             Binder.restoreCallingIdentity(ident)
         }
+        return success
     }
 
     private fun PackageManager.getApplicationInfoAsUser(
         packageName: String,
         flags: Int,
         userId: Int
-    ): ApplicationInfo? {
+    ): ApplicationInfo {
         val method = this::class.java.getDeclaredMethod(
             "getApplicationInfoAsUser",
             packageName::class.java,
             flags::class.javaPrimitiveType,
             userId::class.javaPrimitiveType
         )
-        return runCatching {
-            XPLogUtils.log("getApplicationInfoAsUser($packageName:$userId)")
-            method.invoke(
-                this,
-                packageName,
-                flags,
-                userId
-            )
-        }.onFailure {
-            XPLogUtils.log(it)
-        }.getOrNull() as? ApplicationInfo
+        XPLogUtils.log("getApplicationInfoAsUser($packageName:$userId)")
+        return method.invoke(
+            this,
+            packageName,
+            flags,
+            userId
+        ) as ApplicationInfo
     }
 
     private fun wrapWithPendingOp(

@@ -88,6 +88,12 @@ class BannedAppViewModel : ViewModel() {
         private const val TAG = "BannedAppViewModel"
     }
 
+    private val tempOutput = ArrayList<String>()
+        get() {
+            field.clear()
+            return field
+        }
+
     private val client = TransactClient()
 
     private val _state = MutableStateFlow(BannedAppState.Empty)
@@ -103,7 +109,7 @@ class BannedAppViewModel : ViewModel() {
             updateState { it.copy(isRefreshing = true) }
             val pm = App.app.packageManager
             withContext(Dispatchers.IO) {
-                val allPackages = client.fetchInstalledPackages()
+                val allPackages = client.packages.list
                 val appInfoList = allPackages.map {
                     val label = it.applicationInfo.loadLabel(pm).toString()
                     val icon = it.applicationInfo.loadIcon(pm)
@@ -111,7 +117,7 @@ class BannedAppViewModel : ViewModel() {
                     val uid = it.applicationInfo.uid
                     AppInfo(label, icon, PkgInfo(packageName, uid / 100_000))
                 }
-                val bannedPkgInfos = client.fetchAllBannedPackages()
+                val bannedPkgInfos = client.allBannedPackages.map { PkgInfo(it) }
                 val bannedAppInfos = ArrayList<AppInfo>()
                 val freedPkgInfos = appInfoList.toMutableList().apply {
                     for (bannedPkgInfo in bannedPkgInfos) {
@@ -137,15 +143,21 @@ class BannedAppViewModel : ViewModel() {
 
     fun onBanPkgs(pkgInfos: List<PkgInfo>) {
         viewModelScope.launch {
-            val banned = client.banPackage(pkgInfos)
+            val banned = tempOutput
+            withContext(Dispatchers.IO) {
+                client.banPackage(pkgInfos.map { it.toString() }, banned)
+            }
+
             if (banned.isEmpty()) {
                 return@launch
             }
+
+            val bannedPkgInfos = banned.map { PkgInfo(it) }
             updateState {
                 val newFreePkgInfos = it.originFreedAppInfos.toMutableList()
                 val newBannedPkgInfos = it.originBannedAppInfos.toMutableList()
                 newFreePkgInfos.moveTo(newBannedPkgInfos) {
-                    it.pkgInfo in banned
+                    it.pkgInfo in bannedPkgInfos
                 }
                 it.copy(
                     originFreedAppInfos = newFreePkgInfos,
@@ -157,15 +169,20 @@ class BannedAppViewModel : ViewModel() {
 
     fun onFreePkgs(pkgInfos: List<PkgInfo>) {
         viewModelScope.launch {
-            val freed = client.freePackage(pkgInfos)
+            val freed = tempOutput
+            withContext(Dispatchers.IO) {
+                client.freePackage(pkgInfos.map { it.toString() }, freed)
+            }
             if (freed.isEmpty()) {
                 return@launch
             }
+
+            val freedPkgInfos = freed.map { PkgInfo(it) }
             updateState {
                 val newFreePkgInfos = it.originFreedAppInfos.toMutableList()
                 val newBannedPkgInfos = it.originBannedAppInfos.toMutableList()
                 newBannedPkgInfos.moveTo(newFreePkgInfos) {
-                    it.pkgInfo in freed
+                    it.pkgInfo in freedPkgInfos
                 }
                 it.copy(
                     originFreedAppInfos = newFreePkgInfos,

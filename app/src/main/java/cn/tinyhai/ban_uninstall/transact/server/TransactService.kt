@@ -6,12 +6,16 @@ import android.content.pm.IPackageManager
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager.NameNotFoundException
 import android.os.*
+import cn.tinyhai.ban_uninstall.App
+import cn.tinyhai.ban_uninstall.BuildConfig
+import cn.tinyhai.ban_uninstall.XposedInit
 import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.transact.ITransactor
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.utils.HandlerUtils
 import cn.tinyhai.ban_uninstall.utils.XPLogUtils
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
+import de.robv.android.xposed.XSharedPreferences
 import rikka.parcelablelist.ParcelableListSlice
 
 interface PkgInfoContainer {
@@ -107,15 +111,29 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
     }
 
     override fun onAppLaunched() {
-        XSharedPrefs.registerPrefChangeListener()
+        XPLogUtils.log("App Launched")
     }
 
     override fun reloadPrefs() {
-        XSharedPrefs.reload()
+        XSharedPrefs.update(XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME).all)
     }
 
     override fun getAuth(): IBinder {
         return AuthService.asBinder()
+    }
+
+    override fun getActiveMode(): Int {
+        return XposedInit.activeMode.ordinal
+    }
+
+    override fun syncPrefs(prefs: Map<Any?, Any?>): Boolean {
+        return try {
+            XSharedPrefs.update(prefs as Map<String, *>)
+            true
+        } catch (e: Exception) {
+            XPLogUtils.log(e)
+            false
+        }
     }
 
     override fun contains(packageName: String, userId: Int): Boolean {

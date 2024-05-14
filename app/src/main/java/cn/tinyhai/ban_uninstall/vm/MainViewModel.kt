@@ -1,13 +1,23 @@
 package cn.tinyhai.ban_uninstall.vm
 
+import android.content.ComponentName
+import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
+import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.widget.Toast
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cn.tinyhai.ban_uninstall.App
+import cn.tinyhai.ban_uninstall.BuildConfig
+import cn.tinyhai.ban_uninstall.auth.IAuth
+import cn.tinyhai.ban_uninstall.auth.client.AuthClient
+import cn.tinyhai.ban_uninstall.receiver.BootCompletedReceiver
+import cn.tinyhai.ban_uninstall.receiver.RestartMainReceiver
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
+import cn.tinyhai.ban_uninstall.transact.entities.ActiveMode
+import cn.tinyhai.ban_uninstall.utils.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,26 +29,28 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 data class MainState(
-    val xpTag: String,
+    val activeMode: ActiveMode,
     val banUninstall: Boolean,
     val banClearData: Boolean,
     val devMode: Boolean,
     val useBannedList: Boolean,
     val showConfirm: Boolean,
     val hasPwd: Boolean,
+    val autoStart: Boolean,
 ) {
-    val isActive get() = xpTag.isNotEmpty()
+    val isActive get() = activeMode != ActiveMode.Disabled
 
     companion object {
         val Empty =
             MainState(
-                xpTag = "",
+                ActiveMode.Disabled,
                 banUninstall = false,
                 banClearData = false,
                 devMode = false,
                 useBannedList = false,
                 showConfirm = false,
-                hasPwd = false
+                hasPwd = false,
+                autoStart = false,
             )
     }
 }
@@ -57,11 +69,12 @@ private class Ticker(
     private var firstTickMs = 0L
 
     fun increaseTick() {
+        resetTickIfTimeout()
+
         if (tick == 0) {
             firstTick()
-        } else {
-            resetTickIfTimeout()
         }
+
         tick += 1
         afterIncreaseTick()
     }
@@ -90,48 +103,65 @@ private class Ticker(
 }
 
 class MainViewModel : ViewModel() {
-    private val prefs get() = App.prefs
-    private val xpTag get() = App.getXpTag()
+    private val prefs: SharedPreferences
 
     private val client = TransactClient()
 
-    private val authClient = client.getAuthClient()
+    private val authClient =
+        client.auth?.let { AuthClient(IAuth.Stub.asInterface(it)) } ?: AuthClient()
 
     private val _state = MutableStateFlow(MainState.Empty)
 
     val state: StateFlow<MainState> = _state.asStateFlow()
     private val isActive get() = state.value.isActive
 
-    private var configChanged = false
-
     private val clearPwdTicker = Ticker(5, 3.toDuration(DurationUnit.SECONDS)) {
         onClearPwd()
     }
 
-    private val prefsListener =
-        OnSharedPreferenceChangeListener { _, _ ->
-            configChanged = true
-        }
+    private val prefsListener: OnSharedPreferenceChangeListener
+
+    private val unregisterRestartMainReceiver: (() -> Unit)?
 
     init {
+        var activeMode = ActiveMode.entries[client.activeMode]
+        if (BuildConfig.ROOT_FEATURE && activeMode == ActiveMode.Disabled) {
+            unregisterRestartMainReceiver = RestartMainReceiver.register(App.app)
+        } else {
+            unregisterRestartMainReceiver = null
+        }
+
+        prefs = App.getPrefs(activeMode)
+        prefsListener = OnSharedPreferenceChangeListener { sp, _ ->
+            if (sp == prefs) {
+                client.syncPrefs(sp.all as Map<Any?, Any?>)
+            }
+        }
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+
+        if (activeMode == ActiveMode.Xposed && !App.isPrefsWorldReadable) {
+            activeMode = ActiveMode.Disabled
+        }
+
+        val autoStart = isBootCompletedReceiverEnabled()
+
         viewModelScope.launch {
-            val xpTag = xpTag
             val isBanUninstall = prefs.getBoolean(App.SP_KEY_BAN_UNINSTALL, true)
             val isBanClearData = prefs.getBoolean(App.SP_KEY_BAN_CLEAR_DATA, true)
             val isDevMode = prefs.getBoolean(App.SP_KEY_DEV_MODE, false)
             val isUseBannedList = prefs.getBoolean(App.SP_KEY_USE_BANNED_LIST, false)
             val isShowConfirm = prefs.getBoolean(App.SP_KEY_SHOW_CONFIRM, false)
-            val hasPwd = authClient.hasPwd
+            val hasPwd = authClient.hasPwd()
             updateState {
                 it.copy(
-                    xpTag = xpTag,
+                    activeMode = activeMode,
                     banUninstall = isBanUninstall,
                     banClearData = isBanClearData,
                     devMode = isDevMode,
                     useBannedList = isUseBannedList,
                     showConfirm = isShowConfirm,
                     hasPwd = hasPwd,
+                    autoStart = autoStart
                 )
             }
         }
@@ -140,10 +170,26 @@ class MainViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        unregisterRestartMainReceiver?.invoke()
+        client.binderDied()
+        authClient.binderDied()
     }
 
     private inline fun updateState(crossinline updater: (MainState) -> MainState) {
         _state.value = updater(state.value)
+    }
+
+    fun hasRoot(): Boolean {
+        return BuildConfig.ROOT_FEATURE && hasRoot
+    }
+
+    fun onActiveWithRoot() {
+        if (!hasRoot || state.value.activeMode != ActiveMode.Disabled) {
+            return
+        }
+        viewModelScope.launch {
+            tryToInjectIntoSystemServer()
+        }
     }
 
     fun onBanUninstall(enabled: Boolean) {
@@ -196,6 +242,19 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun onAutoStart(enabled: Boolean) {
+        if (hasRoot().not() || isActive.not() || state.value.activeMode != ActiveMode.Root) {
+            return
+        }
+        val autoStart = state.value.autoStart
+        if (autoStart != enabled) {
+            setBootCompletedReceiverEnabled(enabled)
+            updateState {
+                it.copy(autoStart = enabled)
+            }
+        }
+    }
+
     fun onVerifyPwd(pwd: String): Boolean {
         return authClient.authenticate(pwd)
     }
@@ -206,7 +265,7 @@ class MainViewModel : ViewModel() {
         }
         authClient.setPwd(pwd)
         updateState {
-            it.copy(hasPwd = authClient.hasPwd)
+            it.copy(hasPwd = authClient.hasPwd())
         }
     }
 
@@ -216,14 +275,7 @@ class MainViewModel : ViewModel() {
         }
         authClient.clearPwd()
         updateState {
-            it.copy(hasPwd = authClient.hasPwd)
-        }
-    }
-
-    fun notifyReloadIfNeeded() {
-        if (configChanged) {
-            configChanged = false
-            client.reloadPrefs()
+            it.copy(hasPwd = authClient.hasPwd())
         }
     }
 
@@ -256,5 +308,23 @@ class MainViewModel : ViewModel() {
                 updateState(updater)
             }
         }
+    }
+
+    private fun isBootCompletedReceiverEnabled(): Boolean {
+        val context = App.app
+        val pm = context.packageManager
+        val receiver = ComponentName(context, BootCompletedReceiver::class.java)
+        return pm.getComponentEnabledSetting(receiver) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    }
+
+    private fun setBootCompletedReceiverEnabled(enabled: Boolean) {
+        val context = App.app
+        val pm = context.packageManager
+        val receiver = ComponentName(context, BootCompletedReceiver::class.java)
+        pm.setComponentEnabledSetting(
+            receiver,
+            if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP
+        )
     }
 }

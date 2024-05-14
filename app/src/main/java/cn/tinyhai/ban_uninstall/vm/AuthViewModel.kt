@@ -17,7 +17,7 @@ class AuthViewModel : ViewModel() {
     lateinit var authData: AuthData
         private set
 
-    val hasPwd get() = authClient.hasPwd
+    val hasPwd get() = authClient.hasPwd()
 
     fun setup(authClient: AuthClient, authData: AuthData) {
         this.authClient = authClient
@@ -50,5 +50,6 @@ class AuthViewModel : ViewModel() {
             onPrevent()
             handled = true
         }
+        authClient.binderDied()
     }
 }

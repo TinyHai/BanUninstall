@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient
+import cn.tinyhai.ban_uninstall.auth.client.AuthClient.Companion.isDummy
 import cn.tinyhai.ban_uninstall.auth.entites.AuthData
 import cn.tinyhai.ban_uninstall.auth.entites.OpType
 import cn.tinyhai.ban_uninstall.ui.component.rememberVerifyPwdDialog
@@ -45,9 +46,11 @@ class AuthActivity : AppCompatActivity() {
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
         super.onCreate(savedInstanceState)
         setFinishOnTouchOutside(false)
-        val authClient = AuthClient.parseFromIntent(intent)
-        val authData = AuthClient.getAuthData(intent)
-        if (!authClient.isAlive && authData.isEmpty) {
+        AuthClient.inject(intent)
+
+        val authClient = AuthClient()
+        val authData = AuthClient.parseAuthData(intent)
+        if (authClient.isDummy || authData.isEmpty) {
             finish()
             return
         }
