@@ -172,7 +172,6 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
           body_path: ${{ github.workspace }}/CHANGELOG.md
           token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
-          draft: true
           files: |
             app/build/outputs/apk/**/*.apk
 
