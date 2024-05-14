@@ -36,8 +36,8 @@ android {
         applicationId = "cn.tinyhai.ban_uninstall"
         minSdk = 21
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.2.1"
+        versionCode = 5
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
