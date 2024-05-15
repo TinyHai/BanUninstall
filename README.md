@@ -16,7 +16,7 @@ Android 5.0 - Android 14
 
 Root:
 
-Android 8.0 - Android 14
+Android 8.1 - Android 14
 
 I have tested with my phone on Android 14, and it works well. I can't ensure it works on your phone.
 
