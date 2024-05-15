@@ -2,10 +2,15 @@ name: Manual Release
 on:
   workflow_dispatch:
     inputs:
+      draft:
+        description: "Publish as draft"
+        type: boolean
+        default: true
       publish:
         description: "Publish to Xposed Module Repository"
         type: boolean
         default: false
+
 
 jobs:
   build_inject_tool:
@@ -169,6 +174,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: BanUninstall
+          draft: ${{ inputs.draft }}
           tag_name: ${{ env.TAG_NAME }}
           body_path: ${{ github.workspace }}/CHANGELOG.md
           token: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
