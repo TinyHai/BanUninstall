@@ -173,7 +173,7 @@ jobs:
       - name: Release to current repository
         uses: softprops/action-gh-release@v2
         with:
-          name: BanUninstall
+          name: ${{ format('BanUninstall_{0}', env.TAG_NAME) }}
           draft: ${{ inputs.draft }}
           tag_name: ${{ env.TAG_NAME }}
           body_path: ${{ github.workspace }}/CHANGELOG.md
