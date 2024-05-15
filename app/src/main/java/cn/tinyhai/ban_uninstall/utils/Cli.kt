@@ -73,7 +73,11 @@ private suspend fun copyPrefsToTmp(filename: String) = withContext(Dispatchers.I
         Environment.getDataDirectory().absolutePath + File.separator + "data" + File.separator + BuildConfig.APPLICATION_ID
     val prefDir = appDataDir + File.separator + "shared_prefs"
     val prefFile = prefDir + File.separator + prefName
-    fastResultWithRootShell("cp", prefFile, LSPATCH_PATH)
+    if (File(prefFile).exists()) {
+        fastResultWithRootShell("cp", prefFile, LSPATCH_PATH)
+    } else {
+        true
+    }
 }
 
 private suspend fun setFilesPermission() = withContext(Dispatchers.IO) {
