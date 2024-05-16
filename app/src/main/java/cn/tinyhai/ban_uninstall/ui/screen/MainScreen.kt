@@ -1,5 +1,6 @@
 package cn.tinyhai.ban_uninstall.ui.screen
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Sms
@@ -19,12 +21,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.PopupPositionProvider
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.R
 import cn.tinyhai.ban_uninstall.transact.entities.ActiveMode
 import cn.tinyhai.ban_uninstall.ui.component.rememberConfirmDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberSetPwdDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberVerifyPwdDialog
+import cn.tinyhai.ban_uninstall.utils.getLogcatFile
 import cn.tinyhai.ban_uninstall.vm.MainState
 import cn.tinyhai.ban_uninstall.vm.MainViewModel
 import com.alorma.compose.settings.ui.SettingsGroup
@@ -49,6 +54,8 @@ fun MainScreen(navigator: DestinationsNavigator) {
                 title = { Text(text = stringResource(id = R.string.app_title_main)) },
                 actions = {
                     if (state.isActive) {
+                        val context = LocalContext.current
+                        val scope = rememberCoroutineScope()
                         TooltipBox(
                             positionProvider = rememberTooltipPositionProvider(),
                             tooltip = {
@@ -66,6 +73,49 @@ fun MainScreen(navigator: DestinationsNavigator) {
                                     Icons.Outlined.Sms,
                                     contentDescription = stringResource(R.string.icon_description_say_hello)
                                 )
+                            }
+                        }
+                        if (BuildConfig.ROOT_FEATURE) {
+                            TooltipBox(
+                                positionProvider = rememberTooltipPositionProvider(),
+                                tooltip = {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                        shape = RoundedCornerShape(4.dp),
+                                    ) {
+                                        Text(text = stringResource(R.string.icon_description_bug_report))
+                                    }
+                                },
+                                state = rememberTooltipState()
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        scope.launch {
+                                            val logcatFile = getLogcatFile()
+                                            val uri = FileProvider.getUriForFile(
+                                                context,
+                                                "${BuildConfig.APPLICATION_ID}.fileprovider",
+                                                logcatFile
+                                            )
+                                            val shareIntent = Intent(Intent.ACTION_SEND)
+                                            shareIntent.putExtra(Intent.EXTRA_STREAM, uri)
+                                            shareIntent.setDataAndType(uri, "text/*")
+                                            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                                            context.startActivity(
+                                                Intent.createChooser(
+                                                    shareIntent,
+                                                    context.getString(R.string.icon_description_bug_report)
+                                                )
+                                            )
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.BugReport,
+                                        contentDescription = stringResource(R.string.icon_description_bug_report)
+                                    )
+                                }
                             }
                         }
                     }

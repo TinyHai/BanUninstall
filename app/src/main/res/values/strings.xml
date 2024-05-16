@@ -53,4 +53,5 @@
     <string name="switch_subtitle_auto_start">在系统启动后自动通过Root激活</string>
     <string name="title_active_with_root">使用Root激活</string>
     <string name="text_content_activate_with_root">是否立即使用Root权限激活？</string>
+    <string name="icon_description_bug_report">抓取日志</string>
 </resources>
