@@ -2,7 +2,11 @@
 
 一个禁止卸载和禁止清除用户数据的Xposed模块 & 支持使用Root激活
 
-A Xposed Module that prevents apps be uninstall or apps' data be cleared. Also support activate with root.
+A Xposed Module that prevents apps be uninstalled or apps' data be cleared. Also support activate with root.
+
+### Translations
+To translate BanUninstall to your language, please use [Crowdin](https://crowdin.com/project/banuninstall)
+
 
 ### Screenshots
 |                    1                     |                    2                     |                    3                     |
