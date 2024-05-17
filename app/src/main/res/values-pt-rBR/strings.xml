@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">Bloqueio de desinstalação</string>
     <string name="configurations">Configurações</string>
-    <string name="app_description">Desative a desinstalação ou a limpeza de dados de aplicativos</string>
-    <string name="app_title_main">Proteger dados dos aplicativos</string>
+    <string name="app_description">Desative a desinstalação de aplicativos e a limpeza de dados de aplicativos</string>
+    <string name="app_title_main">@string/app_name</string>
     <string name="app_title_banned_app_bottom_sheet">Aplicativos proibidos</string>
     <string name="app_title_banned_app_app_bar">Aplicativos desprotegidos</string>
     <string name="group_title_module_status">Estado de ativação do módulo</string>
@@ -22,10 +22,10 @@
     <string name="menulink_change_password">Alterar senha</string>
     <string name="module_status_active">Funcionando</string>
     <string name="module_status_disable">Não está funcionando</string>
-    <string name="module_active_mode">Modo operacional</string>
+    <string name="module_active_mode">Modo operacional: %1$s</string>
     <string name="icon_description_sync">Sincronizar as configurações com o sistema</string>
     <string name="icon_description_say_hello">Mensagem de teste</string>
-    <string name="text_app_label_dual">(abertura dupla)</string>
+    <string name="text_app_label_dual">(Duplo)%1$s</string>
     <string name="text_empty_list">Vazio</string>
     <string name="text_drag_target_add_default">"Arraste aqui para adicionar à lista de aplicativos protegidos"</string>
     <string name="text_drag_target_add_in_bound">Solte para concluir a adição</string>
@@ -54,5 +54,5 @@
     <string name="switch_subtitle_auto_start">Ativar automaticamente através do Root após a inicialização do sistema</string>
     <string name="title_active_with_root">Ativar usando Root</string>
     <string name="text_content_activate_with_root">Deseja ativar com privilégios Root agora?</string>
-    <string name="icon_description_bug_report">Registrar essa merda!</string>
+    <string name="icon_description_bug_report">Relatório de erro</string>
 </resources>
