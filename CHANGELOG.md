@@ -1,3 +1,1 @@
-- 修复首次安装Root激活失败的问题
-- 如果你已经安装了LSPosed或者其他Xposed框架，请不要使用Root激活，这可能会导致系统软重启
-- 如果你非要在装了Xposed框架的系统上用Root激活，也请在系统启动后过几分钟，再尝试用Root激活
+- Support Brazilian Portuguese by @baianohak
