@@ -2,12 +2,12 @@
 <resources>
     <string name="app_name">Bloqueio de desinstalação</string>
     <string name="configurations">Configurações</string>
-    <string name="app_description">Desative a desinstalação de aplicativos e a limpeza de dados de aplicativos</string>
+    <string name="app_description">Desative a desinstalação ou a limpeza de dados dos aplicativos</string>
     <string name="app_title_main">@string/app_name</string>
     <string name="app_title_banned_app_bottom_sheet">Aplicativos proibidos</string>
     <string name="app_title_banned_app_app_bar">Aplicativos desprotegidos</string>
     <string name="group_title_module_status">Estado de ativação do módulo</string>
-    <string name="group_title_function">Configuração de função</string>
+    <string name="group_title_function">Configuração das funções</string>
     <string name="group_title_advanced">Avançado</string>
     <string name="group_title_security">Segurança</string>
     <string name="switch_title_ban_uninstall">Desativar a desinstalação de aplicativos</string>
