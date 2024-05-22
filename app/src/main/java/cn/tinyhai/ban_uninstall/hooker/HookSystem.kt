@@ -16,6 +16,7 @@ import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
+import cn.tinyhai.ban_uninstall.utils.SPHost
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
 import cn.tinyhai.xp.annotation.*
 import cn.tinyhai.xp.hook.Hooker
@@ -59,8 +60,8 @@ class HookSystem(
     @HookerGate
     fun isHookerEnable(id: String): Boolean {
         return when (id) {
-            App.SP_KEY_BAN_UNINSTALL -> XSharedPrefs.isBanUninstall
-            App.SP_KEY_BAN_CLEAR_DATA -> XSharedPrefs.isBanClearData
+            SPHost.SP_KEY_BAN_UNINSTALL -> XSharedPrefs.isBanUninstall
+            SPHost.SP_KEY_BAN_CLEAR_DATA -> XSharedPrefs.isBanClearData
             else -> false
         }
     }
@@ -83,7 +84,7 @@ class HookSystem(
         }
     }
 
-    @HookerId(App.SP_KEY_BAN_UNINSTALL)
+    @HookerId(SPHost.SP_KEY_BAN_UNINSTALL)
     @MethodHooker(
         className = "com.android.server.pm.PackageManagerService",
         methodName = "deletePackage",
@@ -179,7 +180,7 @@ class HookSystem(
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    @HookerId(App.SP_KEY_BAN_UNINSTALL)
+    @HookerId(SPHost.SP_KEY_BAN_UNINSTALL)
     @MethodHooker(
         className = "com.android.server.pm.PackageManagerService",
         methodName = "deleteExistingPackageAsUser",
@@ -190,7 +191,7 @@ class HookSystem(
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    @HookerId(App.SP_KEY_BAN_UNINSTALL)
+    @HookerId(SPHost.SP_KEY_BAN_UNINSTALL)
     @MethodHooker(
         className = "com.android.server.pm.PackageManagerService",
         methodName = "deletePackageVersioned",
@@ -285,7 +286,7 @@ class HookSystem(
         }
     }
 
-    @HookerId(App.SP_KEY_BAN_CLEAR_DATA)
+    @HookerId(SPHost.SP_KEY_BAN_CLEAR_DATA)
     @MethodHooker(
         className = "com.android.server.pm.PackageManagerService",
         methodName = "clearApplicationUserData",
@@ -295,7 +296,7 @@ class HookSystem(
         handleClearApplicationUserData(param)
     }
 
-    @HookerId(App.SP_KEY_BAN_CLEAR_DATA)
+    @HookerId(SPHost.SP_KEY_BAN_CLEAR_DATA)
     @MethodHooker(
         className = "com.android.server.pm.PackageManagerService\$IPackageManagerImpl",
         methodName = "clearApplicationUserData",
@@ -305,7 +306,7 @@ class HookSystem(
         handleClearApplicationUserData(param)
     }
 
-    @HookerId(App.SP_KEY_BAN_CLEAR_DATA)
+    @HookerId(SPHost.SP_KEY_BAN_CLEAR_DATA)
     @MethodHooker(
         className = "com.android.server.am.ActivityManagerService",
         methodName = "clearApplicationUserData",
