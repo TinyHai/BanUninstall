@@ -27,8 +27,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient.Companion.isDummy
-import cn.tinyhai.ban_uninstall.auth.entites.AuthData
-import cn.tinyhai.ban_uninstall.auth.entites.OpType
+import cn.tinyhai.ban_uninstall.auth.entities.AuthData
+import cn.tinyhai.ban_uninstall.auth.entities.OpType
 import cn.tinyhai.ban_uninstall.ui.component.rememberVerifyPwdDialog
 import cn.tinyhai.ban_uninstall.ui.theme.AppTheme
 import cn.tinyhai.ban_uninstall.utils.BiometricUtils

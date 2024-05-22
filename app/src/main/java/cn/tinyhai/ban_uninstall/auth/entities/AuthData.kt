@@ -1,4 +1,4 @@
-package cn.tinyhai.ban_uninstall.auth.entites
+package cn.tinyhai.ban_uninstall.auth.entities
 
 import android.content.pm.ApplicationInfo
 import android.os.Parcelable
@@ -28,9 +28,4 @@ data class AuthData(
             ApplicationInfo()
         )
     }
-}
-
-enum class OpType {
-    ClearData,
-    Uninstall
 }
