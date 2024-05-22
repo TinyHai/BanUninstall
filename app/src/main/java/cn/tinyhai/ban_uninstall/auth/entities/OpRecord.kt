@@ -3,7 +3,6 @@ package cn.tinyhai.ban_uninstall.auth.entities
 import android.os.Parcelable
 import androidx.annotation.Keep
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
-import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
 @Keep
@@ -17,11 +16,9 @@ data class OpRecord(
     val timeMillis: Long,
 ) : Parcelable {
 
-    @IgnoredOnParcel
-    val opType = OpType.entries[opTypeOrdinal]
+    val opType get() = OpType.entries[opTypeOrdinal]
 
-    @IgnoredOnParcel
-    val result = OpResult.entries[resultOrdinal]
+    val result get() = OpResult.entries[resultOrdinal]
 
     companion object {
         operator fun invoke(
