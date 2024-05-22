@@ -51,7 +51,7 @@ object AuthService : IAuth.Stub() {
                 onCancel
             )
         )
-        kotlin.runCatching {
+        runCatching {
             startAuthActivity(opId, pkgInfo, OpType.ClearData, callingUid, callingPackageName)
         }.onSuccess {
             if (!it) {
@@ -89,6 +89,20 @@ object AuthService : IAuth.Stub() {
             XPLogUtils.log("maybe there is a sharedlibrary is being uninstalled, just skip it")
             agree(opId)
         }
+    }
+
+    fun onPreventUninstall(pkgInfo: PkgInfo, callingUid: Int, callingPackageName: String) {
+        opRecordList.add(
+            opRecord = OpRecord(opType = OpType.Uninstall, pkgInfo, callingUid, callingPackageName),
+            result = OpResult.Prevented
+        )
+    }
+
+    fun onPreventClearData(pkgInfo: PkgInfo, callingUid: Int, callingPackageName: String) {
+        opRecordList.add(
+            opRecord = OpRecord(opType = OpType.ClearData, pkgInfo, callingUid, callingPackageName),
+            result = OpResult.Prevented
+        )
     }
 
     private fun startAuthActivity(
