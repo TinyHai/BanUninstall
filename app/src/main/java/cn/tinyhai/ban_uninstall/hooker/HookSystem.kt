@@ -1,7 +1,5 @@
 package cn.tinyhai.ban_uninstall.hooker
 
-import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.content.pm.IPackageDataObserver
 import android.content.pm.IPackageDeleteObserver2
 import android.content.pm.VersionedPackage
@@ -10,13 +8,12 @@ import android.os.Build
 import android.os.Handler
 import android.os.Process
 import androidx.annotation.RequiresApi
-import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.XposedInit
 import cn.tinyhai.ban_uninstall.auth.server.AuthService
-import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import cn.tinyhai.ban_uninstall.utils.SPHost
+import cn.tinyhai.ban_uninstall.utils.XPLogUtils
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
 import cn.tinyhai.xp.annotation.*
 import cn.tinyhai.xp.hook.Hooker
@@ -25,6 +22,7 @@ import cn.tinyhai.xp.hook.logger.XPLogger
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.io.File
 
 @HookScope(
     targetPackageName = PKG_ANDROID,
@@ -82,6 +80,22 @@ class HookSystem(
         }.also {
             pmsHandler = it
         }
+    }
+
+    private fun getCallingPackageName(callingPid: Int): String {
+        logger.info("getCallingPackageName($callingPid)")
+        return runCatching {
+            val processName =
+                File("/proc/$callingPid/cmdline").readText().substringBefore(Char.MIN_VALUE)
+            val colonIdx = processName.indexOf(':')
+            if (colonIdx >= 0) {
+                processName.substring(0, colonIdx)
+            } else {
+                processName
+            }.also {
+                XPLogUtils.log(it)
+            }
+        }.getOrDefault("")
     }
 
     @HookerId(SPHost.SP_KEY_BAN_UNINSTALL)
@@ -144,7 +158,7 @@ class HookSystem(
                         },
                         pkgInfo = PkgInfo(packageName, userId),
                         callingUid = Binder.getCallingUid(),
-                        callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                        callingPackageName = getCallingPackageName(Binder.getCallingPid())
                     )
                 } else {
                     postObserver()
@@ -165,7 +179,7 @@ class HookSystem(
                         },
                         pkgInfo = PkgInfo(packageName, userId),
                         callingUid = Binder.getCallingUid(),
-                        callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                        callingPackageName = getCallingPackageName(Binder.getCallingPid())
                     )
                 } else {
                     postObserver()
@@ -251,7 +265,7 @@ class HookSystem(
                         },
                         pkgInfo = PkgInfo(packageName, userId),
                         callingUid = Binder.getCallingUid(),
-                        callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                        callingPackageName = getCallingPackageName(Binder.getCallingPid())
                     )
                 } else {
                     postObserver()
@@ -272,7 +286,7 @@ class HookSystem(
                         },
                         pkgInfo = PkgInfo(packageName, userId),
                         callingUid = Binder.getCallingUid(),
-                        callingPackageName = AuthService.getCallingPackageName(Binder.getCallingPid())
+                        callingPackageName = getCallingPackageName(Binder.getCallingPid())
                     )
                 } else {
                     postObserver()

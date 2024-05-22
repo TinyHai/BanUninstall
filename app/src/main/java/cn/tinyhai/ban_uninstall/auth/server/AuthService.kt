@@ -12,7 +12,6 @@ import cn.tinyhai.ban_uninstall.auth.entities.OpType
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.utils.SystemContextHolder
 import cn.tinyhai.ban_uninstall.utils.XPLogUtils
-import java.io.File
 
 object AuthService : IAuth.Stub() {
 
@@ -168,22 +167,6 @@ object AuthService : IAuth.Stub() {
                 opRecordList.add(opRecord, OpResult.Prevented)
             }
         }
-    }
-
-    fun getCallingPackageName(callingPid: Int): String {
-        XPLogUtils.log("getCallingPackageName($callingPid)")
-        return runCatching {
-            val processName =
-                File("/proc/$callingPid/cmdline").readText().substringBefore(Char.MIN_VALUE)
-            val colonIdx = processName.indexOf(':')
-            if (colonIdx >= 0) {
-                processName.substring(0, colonIdx)
-            } else {
-                processName
-            }.also {
-                XPLogUtils.log(it)
-            }
-        }.getOrDefault("")
     }
 
     override fun agree(opId: Int) {
