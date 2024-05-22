@@ -5,8 +5,10 @@ import android.content.pm.PackageManager
 import android.os.Binder
 import cn.tinyhai.ban_uninstall.auth.IAuth
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient
-import cn.tinyhai.ban_uninstall.auth.entites.AuthData
-import cn.tinyhai.ban_uninstall.auth.entites.OpType
+import cn.tinyhai.ban_uninstall.auth.entities.AuthData
+import cn.tinyhai.ban_uninstall.auth.entities.OpRecord
+import cn.tinyhai.ban_uninstall.auth.entities.OpResult
+import cn.tinyhai.ban_uninstall.auth.entities.OpType
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.utils.SystemContextHolder
 import cn.tinyhai.ban_uninstall.utils.XPLogUtils
@@ -17,6 +19,8 @@ object AuthService : IAuth.Stub() {
     private val helper = AuthHelper()
 
     private val pendingOp = PendingOpList()
+
+    private val opRecordList = OpRecordList()
 
     override fun hasPwd(): Boolean {
         return helper.hasPwd
@@ -41,7 +45,13 @@ object AuthService : IAuth.Stub() {
         callingUid: Int,
         callingPackageName: String
     ) {
-        val opId = pendingOp.add(wrapWithPendingOp(onConfirm, onCancel))
+        val opId = pendingOp.add(
+            wrapWithPendingOp(
+                OpRecord(opType = OpType.ClearData, pkgInfo, callingUid, callingPackageName),
+                onConfirm,
+                onCancel
+            )
+        )
         kotlin.runCatching {
             startAuthActivity(opId, pkgInfo, OpType.ClearData, callingUid, callingPackageName)
         }.onSuccess {
@@ -62,7 +72,13 @@ object AuthService : IAuth.Stub() {
         callingUid: Int,
         callingPackageName: String
     ) {
-        val opId = pendingOp.add(wrapWithPendingOp(onConfirm, onCancel))
+        val opId = pendingOp.add(
+            wrapWithPendingOp(
+                OpRecord(opType = OpType.Uninstall, pkgInfo, callingUid, callingPackageName),
+                onConfirm,
+                onCancel
+            )
+        )
         runCatching {
             startAuthActivity(opId, pkgInfo, OpType.Uninstall, callingUid, callingPackageName)
         }.onSuccess {
@@ -71,7 +87,7 @@ object AuthService : IAuth.Stub() {
             }
         }.onFailure {
             XPLogUtils.log(it)
-            XPLogUtils.log("maybe there is a sharedlibrary is being uninstall, just skip it")
+            XPLogUtils.log("maybe there is a sharedlibrary is being uninstalled, just skip it")
             agree(opId)
         }
     }
@@ -137,16 +153,19 @@ object AuthService : IAuth.Stub() {
     }
 
     private fun wrapWithPendingOp(
+        opRecord: OpRecord,
         onConfirm: () -> Unit,
         onCancel: () -> Unit
     ): PendingOpList.PendingOp {
         return object : PendingOpList.PendingOp {
             override fun confirm() {
                 onConfirm()
+                opRecordList.add(opRecord, OpResult.Allowed)
             }
 
             override fun cancel() {
                 onCancel()
+                opRecordList.add(opRecord, OpResult.Prevented)
             }
         }
     }
@@ -183,5 +202,9 @@ object AuthService : IAuth.Stub() {
         } finally {
             Binder.restoreCallingIdentity(calling)
         }
+    }
+
+    override fun getAllOpRecord(): List<OpRecord> {
+        return opRecordList.toList()
     }
 }

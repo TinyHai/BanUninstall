@@ -9,7 +9,8 @@ import android.util.Log
 import cn.tinyhai.ban_uninstall.AuthActivity
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.auth.IAuth
-import cn.tinyhai.ban_uninstall.auth.entites.AuthData
+import cn.tinyhai.ban_uninstall.auth.entities.AuthData
+import cn.tinyhai.ban_uninstall.auth.entities.OpRecord
 import java.security.MessageDigest
 
 class AuthClient(
@@ -46,6 +47,10 @@ class AuthClient(
 
     override fun prevent(opId: Int) {
         service.prevent(opId)
+    }
+
+    override fun getAllOpRecord(): List<OpRecord> {
+        return service.allOpRecord ?: emptyList()
     }
 
     @OptIn(ExperimentalStdlibApi::class)

@@ -2,7 +2,7 @@ package cn.tinyhai.ban_uninstall.vm
 
 import androidx.lifecycle.ViewModel
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient
-import cn.tinyhai.ban_uninstall.auth.entites.AuthData
+import cn.tinyhai.ban_uninstall.auth.entities.AuthData
 
 class AuthViewModel : ViewModel() {
 
