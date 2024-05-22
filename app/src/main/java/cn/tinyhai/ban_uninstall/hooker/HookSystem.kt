@@ -1,8 +1,6 @@
 package cn.tinyhai.ban_uninstall.hooker
 
-import android.content.pm.IPackageDataObserver
-import android.content.pm.IPackageDeleteObserver2
-import android.content.pm.VersionedPackage
+import android.content.pm.*
 import android.os.Binder
 import android.os.Build
 import android.os.Handler
@@ -13,6 +11,7 @@ import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import cn.tinyhai.ban_uninstall.utils.SPHost
+import cn.tinyhai.ban_uninstall.utils.SystemContextHolder
 import cn.tinyhai.ban_uninstall.utils.XPLogUtils
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
 import cn.tinyhai.xp.annotation.*
@@ -82,6 +81,40 @@ class HookSystem(
         }
     }
 
+    private fun PackageManager.getApplicationInfoAsUser(
+        packageName: String,
+        flags: Int,
+        userId: Int
+    ): ApplicationInfo {
+        val method = this::class.java.getDeclaredMethod(
+            "getApplicationInfoAsUser",
+            packageName::class.java,
+            flags::class.javaPrimitiveType,
+            userId::class.javaPrimitiveType
+        )
+        XPLogUtils.log("getApplicationInfoAsUser($packageName:$userId)")
+        return method.invoke(
+            this,
+            packageName,
+            flags,
+            userId
+        ) as ApplicationInfo
+    }
+
+    private fun isNotApp(pkgInfo: PkgInfo): Boolean {
+        return getApplicationInfoAsUser(pkgInfo) == null
+    }
+
+    private fun getApplicationInfoAsUser(pkgInfo: PkgInfo): ApplicationInfo? {
+        var appInfo: ApplicationInfo? = null
+        SystemContextHolder.withSystemContext {
+            appInfo = runCatching {
+                packageManager.getApplicationInfoAsUser(pkgInfo.packageName, 0, pkgInfo.userId)
+            }.getOrNull()
+        }
+        return appInfo
+    }
+
     private fun getCallingPackageName(callingPid: Int): String {
         logger.info("getCallingPackageName($callingPid)")
         return runCatching {
@@ -145,6 +178,13 @@ class HookSystem(
             }
         }
 
+        val pkgInfo = PkgInfo(packageName, userId)
+        if (isNotApp(pkgInfo)) {
+            logger.info("skip some static sharedlibraries; $pkgInfo")
+            return
+        }
+        val callingUid = Binder.getCallingUid()
+        val callingPackageName = getCallingPackageName(Binder.getCallingPid())
         when {
             !isUseBannedList -> {
                 if (isShowConfirm) {
@@ -156,12 +196,17 @@ class HookSystem(
                             postObserver()
                             logger.info("prevent uninstall")
                         },
-                        pkgInfo = PkgInfo(packageName, userId),
-                        callingUid = Binder.getCallingUid(),
-                        callingPackageName = getCallingPackageName(Binder.getCallingPid())
+                        pkgInfo = pkgInfo,
+                        callingUid = callingUid,
+                        callingPackageName = callingPackageName
                     )
                 } else {
                     postObserver()
+                    AuthService.onPreventUninstall(
+                        pkgInfo = pkgInfo,
+                        callingUid = callingUid,
+                        callingPackageName = callingPackageName
+                    )
                 }
                 param.result = null
             }
@@ -177,12 +222,17 @@ class HookSystem(
                             postObserver()
                             logger.info("prevent uninstall")
                         },
-                        pkgInfo = PkgInfo(packageName, userId),
-                        callingUid = Binder.getCallingUid(),
-                        callingPackageName = getCallingPackageName(Binder.getCallingPid())
+                        pkgInfo = pkgInfo,
+                        callingUid = callingUid,
+                        callingPackageName = callingPackageName
                     )
                 } else {
                     postObserver()
+                    AuthService.onPreventUninstall(
+                        pkgInfo = pkgInfo,
+                        callingUid = callingUid,
+                        callingPackageName = callingPackageName
+                    )
                 }
                 param.result = null
             }
@@ -252,6 +302,9 @@ class HookSystem(
             }
         }
 
+        val pkgInfo = PkgInfo(packageName, userId)
+        val callingUid = Binder.getCallingUid()
+        val callingPackageName = getCallingPackageName(Binder.getCallingPid())
         when {
             !isUseBannedList -> {
                 if (isShowConfirm) {
@@ -263,12 +316,17 @@ class HookSystem(
                             postObserver()
                             logger.info("prevent clear")
                         },
-                        pkgInfo = PkgInfo(packageName, userId),
-                        callingUid = Binder.getCallingUid(),
-                        callingPackageName = getCallingPackageName(Binder.getCallingPid())
+                        pkgInfo = pkgInfo,
+                        callingUid = callingUid,
+                        callingPackageName = callingPackageName
                     )
                 } else {
                     postObserver()
+                    AuthService.onPreventClearData(
+                        pkgInfo = pkgInfo,
+                        callingUid = callingUid,
+                        callingPackageName = callingPackageName
+                    )
                 }
                 param.result = if (isFromAm) true else null
             }
@@ -284,12 +342,17 @@ class HookSystem(
                             postObserver()
                             logger.info("prevent clear")
                         },
-                        pkgInfo = PkgInfo(packageName, userId),
-                        callingUid = Binder.getCallingUid(),
-                        callingPackageName = getCallingPackageName(Binder.getCallingPid())
+                        pkgInfo = pkgInfo,
+                        callingUid = callingUid,
+                        callingPackageName = callingPackageName
                     )
                 } else {
                     postObserver()
+                    AuthService.onPreventClearData(
+                        pkgInfo = pkgInfo,
+                        callingUid = callingUid,
+                        callingPackageName = callingPackageName
+                    )
                 }
                 param.result = if (isFromAm) true else null
             }
