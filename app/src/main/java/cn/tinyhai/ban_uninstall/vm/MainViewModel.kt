@@ -1,12 +1,10 @@
 package cn.tinyhai.ban_uninstall.vm
 
 import android.content.ComponentName
-import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.widget.Toast
-import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cn.tinyhai.ban_uninstall.App
@@ -17,13 +15,13 @@ import cn.tinyhai.ban_uninstall.receiver.BootCompletedReceiver
 import cn.tinyhai.ban_uninstall.receiver.RestartMainReceiver
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.transact.entities.ActiveMode
-import cn.tinyhai.ban_uninstall.utils.*
-import kotlinx.coroutines.Dispatchers
+import cn.tinyhai.ban_uninstall.utils.SharedPrefs
+import cn.tinyhai.ban_uninstall.utils.hasRoot
+import cn.tinyhai.ban_uninstall.utils.tryToInjectIntoSystemServer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -103,8 +101,6 @@ private class Ticker(
 }
 
 class MainViewModel : ViewModel() {
-    private val prefs: SharedPreferences
-
     private val client = TransactClient()
 
     private val authClient =
@@ -131,45 +127,41 @@ class MainViewModel : ViewModel() {
             unregisterRestartMainReceiver = null
         }
 
-        prefs = App.getPrefs(activeMode)
         prefsListener = OnSharedPreferenceChangeListener { sp, _ ->
-            if (sp == prefs) {
+            if (sp == SharedPrefs.prefs) {
                 client.syncPrefs(sp.all as Map<Any?, Any?>)
             }
         }
-        prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+        SharedPrefs.prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
-        if (activeMode == ActiveMode.Xposed && !App.isPrefsWorldReadable) {
+        if (activeMode == ActiveMode.Xposed && !SharedPrefs.isWorldReadable) {
             activeMode = ActiveMode.Disabled
         }
 
         val autoStart = isBootCompletedReceiverEnabled()
 
         viewModelScope.launch {
-            val isBanUninstall = prefs.getBoolean(App.SP_KEY_BAN_UNINSTALL, true)
-            val isBanClearData = prefs.getBoolean(App.SP_KEY_BAN_CLEAR_DATA, true)
-            val isDevMode = prefs.getBoolean(App.SP_KEY_DEV_MODE, false)
-            val isUseBannedList = prefs.getBoolean(App.SP_KEY_USE_BANNED_LIST, false)
-            val isShowConfirm = prefs.getBoolean(App.SP_KEY_SHOW_CONFIRM, false)
             val hasPwd = authClient.hasPwd()
-            updateState {
-                it.copy(
-                    activeMode = activeMode,
-                    banUninstall = isBanUninstall,
-                    banClearData = isBanClearData,
-                    devMode = isDevMode,
-                    useBannedList = isUseBannedList,
-                    showConfirm = isShowConfirm,
-                    hasPwd = hasPwd,
-                    autoStart = autoStart
-                )
+            SharedPrefs.apply {
+                updateState {
+                    it.copy(
+                        activeMode = activeMode,
+                        banUninstall = isBanUninstall,
+                        banClearData = isBanClearData,
+                        devMode = isDevMode,
+                        useBannedList = isUseBannedList,
+                        showConfirm = isShowConfirm,
+                        hasPwd = hasPwd,
+                        autoStart = autoStart
+                    )
+                }
             }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        SharedPrefs.prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         unregisterRestartMainReceiver?.invoke()
         client.binderDied()
         authClient.binderDied()
@@ -197,7 +189,8 @@ class MainViewModel : ViewModel() {
             return
         }
         val state = state.value
-        onSwitchChange(App.SP_KEY_BAN_UNINSTALL, state.banUninstall, enabled) {
+        onValueChanged(state.banUninstall, enabled) {
+            SharedPrefs.isBanUninstall = enabled
             it.copy(banUninstall = enabled)
         }
     }
@@ -207,7 +200,8 @@ class MainViewModel : ViewModel() {
             return
         }
         val state = state.value
-        onSwitchChange(App.SP_KEY_BAN_CLEAR_DATA, state.banClearData, enabled) {
+        onValueChanged(state.banClearData, enabled) {
+            SharedPrefs.isBanClearData = enabled
             it.copy(banClearData = enabled)
         }
     }
@@ -217,7 +211,8 @@ class MainViewModel : ViewModel() {
             return
         }
         val state = state.value
-        onSwitchChange(App.SP_KEY_DEV_MODE, state.devMode, enabled) {
+        onValueChanged(state.devMode, enabled) {
+            SharedPrefs.isDevMode = enabled
             it.copy(devMode = enabled)
         }
     }
@@ -227,7 +222,8 @@ class MainViewModel : ViewModel() {
             return
         }
         val state = state.value
-        onSwitchChange(App.SP_KEY_USE_BANNED_LIST, state.useBannedList, enabled) {
+        onValueChanged(state.useBannedList, enabled) {
+            SharedPrefs.isUseBannedList = enabled
             it.copy(useBannedList = enabled)
         }
     }
@@ -237,7 +233,8 @@ class MainViewModel : ViewModel() {
             return
         }
         val state = state.value
-        onSwitchChange(App.SP_KEY_SHOW_CONFIRM, state.showConfirm, enabled) {
+        onValueChanged(state.showConfirm, enabled) {
+            SharedPrefs.isShowConfirm = enabled
             it.copy(showConfirm = enabled)
         }
     }
@@ -246,12 +243,10 @@ class MainViewModel : ViewModel() {
         if (hasRoot().not() || isActive.not() || state.value.activeMode != ActiveMode.Root) {
             return
         }
-        val autoStart = state.value.autoStart
-        if (autoStart != enabled) {
+        val state = state.value
+        onValueChanged(state.autoStart, enabled) {
             setBootCompletedReceiverEnabled(enabled)
-            updateState {
-                it.copy(autoStart = enabled)
-            }
+            it.copy(autoStart = enabled)
         }
     }
 
@@ -292,21 +287,13 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    private inline fun onSwitchChange(
-        key: String,
+    private inline fun onValueChanged(
         oldValue: Boolean,
         newValue: Boolean,
         crossinline updater: (MainState) -> MainState
     ) {
-        viewModelScope.launch {
-            if (oldValue != newValue) {
-                withContext(Dispatchers.IO) {
-                    prefs.edit(true) {
-                        putBoolean(key, newValue)
-                    }
-                }
-                updateState(updater)
-            }
+        if (oldValue != newValue) {
+            updateState(updater)
         }
     }
 

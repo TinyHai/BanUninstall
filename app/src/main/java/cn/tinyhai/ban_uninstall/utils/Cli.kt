@@ -4,6 +4,7 @@ import android.os.Environment
 import android.util.Log
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
+import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_FILE_NAME
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.Shell.FLAG_NON_ROOT_SHELL
 import kotlinx.coroutines.Dispatchers
@@ -55,7 +56,7 @@ suspend fun fastResultWithShell(vararg cmd: String) = withContext(Dispatchers.IO
 }
 
 suspend fun tryToInjectIntoSystemServer(): Boolean {
-    return copyPatchToTmp() && copyPrefsToTmp(App.SP_FILE_NAME) && setFilesPermission() && injectSystemServer()
+    return copyPatchToTmp() && copyPrefsToTmp(SP_FILE_NAME) && setFilesPermission() && injectSystemServer()
 }
 
 private suspend fun copyPatchToTmp() = withContext(Dispatchers.IO) {

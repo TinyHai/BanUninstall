@@ -6,13 +6,13 @@ import android.content.pm.IPackageManager
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager.NameNotFoundException
 import android.os.*
-import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.XposedInit
 import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.transact.ITransactor
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.utils.HandlerUtils
+import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_FILE_NAME
 import cn.tinyhai.ban_uninstall.utils.XPLogUtils
 import cn.tinyhai.ban_uninstall.utils.XSharedPrefs
 import de.robv.android.xposed.XSharedPreferences
@@ -115,7 +115,7 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
     }
 
     override fun reloadPrefs() {
-        XSharedPrefs.update(XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME).all)
+        XSharedPrefs.update(XSharedPreferences(BuildConfig.APPLICATION_ID, SP_FILE_NAME).all)
     }
 
     override fun getAuth(): IBinder {

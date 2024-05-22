@@ -8,6 +8,12 @@ import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.configs.Configs
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
+import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_FILE_NAME
+import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_KEY_BAN_CLEAR_DATA
+import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_KEY_BAN_UNINSTALL
+import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_KEY_DEV_MODE
+import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_KEY_SHOW_CONFIRM
+import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_KEY_USE_BANNED_LIST
 import de.robv.android.xposed.XSharedPreferences
 
 private class MapPreferences(
@@ -71,8 +77,9 @@ private class MapPreferences(
 }
 
 @SuppressLint("PrivateApi")
-object XSharedPrefs {
-    private val prefs: MapPreferences
+object XSharedPrefs : SPHost {
+    private val _prefs: MapPreferences
+    override val prefs: SharedPreferences get() = _prefs
 
     private val listeners = ArrayList<() -> Unit>()
 
@@ -87,8 +94,8 @@ object XSharedPrefs {
     }
 
     init {
-        val xprefs = XSharedPreferences(BuildConfig.APPLICATION_ID, App.SP_FILE_NAME)
-        prefs = MapPreferences(xprefs.all)
+        val xprefs = XSharedPreferences(BuildConfig.APPLICATION_ID, SP_FILE_NAME)
+        _prefs = MapPreferences(xprefs.all)
 
         XPLogUtils.log(xprefs.file.absolutePath)
         XPLogUtils.log(prefs.toString())
@@ -151,20 +158,15 @@ object XSharedPrefs {
         } ?: context.registerReceiver(receiver, intentFilter)
     }
 
-    val isBanUninstall
-        get() = prefs.getBoolean(App.SP_KEY_BAN_UNINSTALL, true)
+    override val isBanUninstall by BooleanPreference(SP_KEY_BAN_UNINSTALL, true)
 
-    val isBanClearData
-        get() = prefs.getBoolean(App.SP_KEY_BAN_CLEAR_DATA, true)
+    override val isBanClearData by BooleanPreference(SP_KEY_BAN_CLEAR_DATA, true)
 
-    val isDevMode
-        get() = prefs.getBoolean(App.SP_KEY_DEV_MODE, false)
+    override val isDevMode by BooleanPreference(SP_KEY_DEV_MODE, false)
 
-    val isUseBannedList
-        get() = prefs.getBoolean(App.SP_KEY_USE_BANNED_LIST, false)
+    override val isUseBannedList by BooleanPreference(SP_KEY_USE_BANNED_LIST, false)
 
-    val isShowConfirm
-        get() = prefs.getBoolean(App.SP_KEY_SHOW_CONFIRM, false)
+    override val isShowConfirm by BooleanPreference(SP_KEY_SHOW_CONFIRM, false)
 
     fun registerPrefsChangeListener(onPrefsChange: () -> Unit) {
         listeners.add(onPrefsChange)
@@ -172,7 +174,7 @@ object XSharedPrefs {
 
     fun update(map: Map<String, *>) {
         val oldSnapshot = getPrefsSnapshot()
-        prefs.update(map)
+        _prefs.update(map)
         val newSnapshot = getPrefsSnapshot()
         if (!oldSnapshot.contentEquals(newSnapshot)) {
             postNotifyReloadListener()
