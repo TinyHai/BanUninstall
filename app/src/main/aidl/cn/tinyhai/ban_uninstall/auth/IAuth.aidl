@@ -14,4 +14,5 @@ interface IAuth {
     oneway void prevent(int opId);
 
     List<OpRecord> getAllOpRecord();
+    void clearAllOpRecord();
 }
