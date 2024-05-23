@@ -1,7 +1,6 @@
 package cn.tinyhai.ban_uninstall.auth.server
 
 import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.os.Binder
 import cn.tinyhai.ban_uninstall.auth.IAuth
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient
@@ -10,6 +9,7 @@ import cn.tinyhai.ban_uninstall.auth.entities.OpRecord
 import cn.tinyhai.ban_uninstall.auth.entities.OpResult
 import cn.tinyhai.ban_uninstall.auth.entities.OpType
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
+import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import cn.tinyhai.ban_uninstall.utils.SystemContextHolder
 import cn.tinyhai.ban_uninstall.utils.XPLogUtils
 
@@ -44,15 +44,34 @@ object AuthService : IAuth.Stub() {
         callingUid: Int,
         callingPackageName: String
     ) {
-        val opId = pendingOp.add(
-            wrapWithPendingOp(
-                OpRecord(opType = OpType.ClearData, pkgInfo, callingUid, callingPackageName),
-                onConfirm,
-                onCancel
+        val appInfo =
+            TransactService.getApplicationInfoAsUser(pkgInfo.packageName, pkgInfo.userId)
+        val opId = SystemContextHolder.withSystemContext {
+            pendingOp.add(
+                wrapWithPendingOp(
+                    OpRecord(
+                        label = appInfo?.loadLabel(packageManager)?.toString(),
+                        opType = OpType.ClearData,
+                        pkgInfo,
+                        callingUid,
+                        callingPackageName
+                    ),
+                    onConfirm,
+                    onCancel
+                )
             )
-        )
+        }
+
+        if (appInfo == null) {
+            XPLogUtils.log("maybe there is a sharedlibrary is being uninstalled, just skip it")
+            agree(opId)
+            return
+        }
+
         runCatching {
-            startAuthActivity(opId, pkgInfo, OpType.ClearData, callingUid, callingPackageName)
+            val callingAppInfo =
+                TransactService.getApplicationInfoAsUser(callingPackageName, callingUid / 100_000)
+            startAuthActivity(opId, OpType.ClearData, appInfo, callingUid, callingAppInfo)
         }.onSuccess {
             if (!it) {
                 prevent(opId)
@@ -60,7 +79,7 @@ object AuthService : IAuth.Stub() {
         }.onFailure {
             XPLogUtils.log(it)
             XPLogUtils.log("!!!! what's wrong?")
-            prevent(opId)
+            agree(opId)
         }
     }
 
@@ -71,61 +90,100 @@ object AuthService : IAuth.Stub() {
         callingUid: Int,
         callingPackageName: String
     ) {
-        val opId = pendingOp.add(
-            wrapWithPendingOp(
-                OpRecord(opType = OpType.Uninstall, pkgInfo, callingUid, callingPackageName),
-                onConfirm,
-                onCancel
+        val appInfo =
+            TransactService.getApplicationInfoAsUser(pkgInfo.packageName, pkgInfo.userId)
+        val opId = SystemContextHolder.withSystemContext {
+            pendingOp.add(
+                wrapWithPendingOp(
+                    OpRecord(
+                        label = appInfo?.loadLabel(packageManager)?.toString(),
+                        opType = OpType.Uninstall,
+                        pkgInfo,
+                        callingUid,
+                        callingPackageName
+                    ),
+                    onConfirm,
+                    onCancel
+                )
             )
-        )
+        }
+
+        if (appInfo == null) {
+            XPLogUtils.log("!!!! $pkgInfo not found")
+            agree(opId)
+            return
+        }
+
         runCatching {
-            startAuthActivity(opId, pkgInfo, OpType.Uninstall, callingUid, callingPackageName)
+            val callingAppInfo =
+                TransactService.getApplicationInfoAsUser(callingPackageName, callingUid / 100_000)
+            startAuthActivity(opId, OpType.Uninstall, appInfo, callingUid, callingAppInfo)
         }.onSuccess {
             if (!it) {
                 prevent(opId)
             }
         }.onFailure {
             XPLogUtils.log(it)
-            XPLogUtils.log("maybe there is a sharedlibrary is being uninstalled, just skip it")
+            XPLogUtils.log("!!!! what's wrong?")
             agree(opId)
         }
     }
 
-    fun onPreventUninstall(pkgInfo: PkgInfo, callingUid: Int, callingPackageName: String) {
-        opRecordList.add(
-            opRecord = OpRecord(opType = OpType.Uninstall, pkgInfo, callingUid, callingPackageName),
-            result = OpResult.Prevented
-        )
+    fun onUninstall(
+        pkgInfo: PkgInfo,
+        callingUid: Int,
+        callingPackageName: String,
+        result: OpResult
+    ) {
+        SystemContextHolder.withSystemContext {
+            val appInfo =
+                TransactService.getApplicationInfoAsUser(pkgInfo.packageName, pkgInfo.userId)
+            opRecordList.add(
+                opRecord = OpRecord(
+                    label = appInfo?.loadLabel(packageManager)?.toString(),
+                    opType = OpType.Uninstall,
+                    pkgInfo,
+                    callingUid,
+                    callingPackageName
+                ),
+                result = result
+            )
+        }
     }
 
-    fun onPreventClearData(pkgInfo: PkgInfo, callingUid: Int, callingPackageName: String) {
-        opRecordList.add(
-            opRecord = OpRecord(opType = OpType.ClearData, pkgInfo, callingUid, callingPackageName),
-            result = OpResult.Prevented
-        )
+    fun onClearData(
+        pkgInfo: PkgInfo,
+        callingUid: Int,
+        callingPackageName: String,
+        result: OpResult
+    ) {
+        SystemContextHolder.withSystemContext {
+            val appInfo =
+                TransactService.getApplicationInfoAsUser(pkgInfo.packageName, pkgInfo.userId)
+            opRecordList.add(
+                opRecord = OpRecord(
+                    label = appInfo?.loadLabel(packageManager)?.toString(),
+                    opType = OpType.ClearData,
+                    pkgInfo,
+                    callingUid,
+                    callingPackageName
+                ),
+                result = result
+            )
+        }
     }
 
     private fun startAuthActivity(
         opId: Int,
-        pkgInfo: PkgInfo,
         opType: OpType,
+        appInfo: ApplicationInfo,
         callingUid: Int,
-        callingPackageName: String
+        callingAppInfo: ApplicationInfo?,
     ): Boolean {
         var success = false
         val ident = Binder.clearCallingIdentity()
         try {
             SystemContextHolder.withSystemContext {
-                val appInfo =
-                    packageManager.getApplicationInfoAsUser(pkgInfo.packageName, 0, pkgInfo.userId)
-
-                val callingAppInfo = runCatching {
-                    packageManager.getApplicationInfoAsUser(
-                        callingPackageName,
-                        0,
-                        callingUid / 100_000
-                    )
-                }.getOrNull()
                 val authData = AuthData(
                     opId = opId,
                     opTypeOrdinal = opType.ordinal,
@@ -143,26 +201,6 @@ object AuthService : IAuth.Stub() {
             Binder.restoreCallingIdentity(ident)
         }
         return success
-    }
-
-    private fun PackageManager.getApplicationInfoAsUser(
-        packageName: String,
-        flags: Int,
-        userId: Int
-    ): ApplicationInfo {
-        val method = this::class.java.getDeclaredMethod(
-            "getApplicationInfoAsUser",
-            packageName::class.java,
-            flags::class.javaPrimitiveType,
-            userId::class.javaPrimitiveType
-        )
-        XPLogUtils.log("getApplicationInfoAsUser($packageName:$userId)")
-        return method.invoke(
-            this,
-            packageName,
-            flags,
-            userId
-        ) as ApplicationInfo
     }
 
     private fun wrapWithPendingOp(
@@ -203,5 +241,9 @@ object AuthService : IAuth.Stub() {
 
     override fun getAllOpRecord(): List<OpRecord> {
         return opRecordList.toList()
+    }
+
+    override fun clearAllOpRecord() {
+        opRecordList.clear()
     }
 }

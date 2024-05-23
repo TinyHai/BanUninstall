@@ -53,6 +53,10 @@ class AuthClient(
         return service.allOpRecord ?: emptyList()
     }
 
+    override fun clearAllOpRecord() {
+        service.clearAllOpRecord()
+    }
+
     @OptIn(ExperimentalStdlibApi::class)
     private fun String.toSha256(): String {
         if (isBlank()) {
