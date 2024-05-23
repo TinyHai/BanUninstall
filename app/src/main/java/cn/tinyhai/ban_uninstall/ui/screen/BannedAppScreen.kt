@@ -108,18 +108,13 @@ fun BannedAppScreen(navigator: DestinationsNavigator) {
                     onSearchTextChange = viewModel::onQueryChange,
                     onSearchStart = { viewModel.clearSelected() },
                     onClearClick = viewModel::onSearchClear,
-                    onBackClick = { navigator.navigateUp() }
-                )
-                TopAppBar(
-                    navigationIcon = {
-                        IconButton(onClick = { navigator.navigateUp() }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "navigationUp"
-                            )
+                    onBackClick = {
+                        if (state.query.isNotBlank()) {
+                            viewModel.onSearchClear()
+                        } else {
+                            navigator.navigateUp()
                         }
-                    },
-                    title = { Text(text = stringResource(id = R.string.app_title_banned_app_app_bar)) },
+                    }
                 )
             },
             scaffoldState = scaffoldState,
