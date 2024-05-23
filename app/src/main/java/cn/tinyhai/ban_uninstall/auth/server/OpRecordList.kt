@@ -13,6 +13,12 @@ class OpRecordList {
         }
     }
 
+    fun clear() {
+        synchronized(records) {
+            records.clear()
+        }
+    }
+
     fun toList(): List<OpRecord> {
         return synchronized(records) {
             records.toList()

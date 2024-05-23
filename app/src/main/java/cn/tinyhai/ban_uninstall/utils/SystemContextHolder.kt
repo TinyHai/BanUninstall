@@ -10,8 +10,8 @@ object SystemContextHolder {
     private var systemContext: Context? = null
     val context: Context get() = systemContext ?: throw IllegalStateException()
 
-    fun withSystemContext(block: Context.() -> Unit) {
-        context.block()
+    inline fun <T> withSystemContext(block: Context.() -> T): T {
+        return context.block()
     }
 
     fun onSystemContext(context: Context) {

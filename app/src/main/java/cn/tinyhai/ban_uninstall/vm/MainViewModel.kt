@@ -27,29 +27,19 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 data class MainState(
-    val activeMode: ActiveMode,
-    val banUninstall: Boolean,
-    val banClearData: Boolean,
-    val devMode: Boolean,
-    val useBannedList: Boolean,
-    val showConfirm: Boolean,
-    val hasPwd: Boolean,
-    val autoStart: Boolean,
+    val activeMode: ActiveMode = ActiveMode.Disabled,
+    val banUninstall: Boolean = false,
+    val banClearData: Boolean = false,
+    val devMode: Boolean = false,
+    val useBannedList: Boolean = false,
+    val showConfirm: Boolean = false,
+    val hasPwd: Boolean = false,
+    val autoStart: Boolean = false,
 ) {
     val isActive get() = activeMode != ActiveMode.Disabled
 
     companion object {
-        val Empty =
-            MainState(
-                ActiveMode.Disabled,
-                banUninstall = false,
-                banClearData = false,
-                devMode = false,
-                useBannedList = false,
-                showConfirm = false,
-                hasPwd = false,
-                autoStart = false,
-            )
+        val Empty = MainState()
     }
 }
 
@@ -143,7 +133,7 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             val hasPwd = authClient.hasPwd()
             SharedPrefs.apply {
-                updateState {
+                updateState(_state) {
                     it.copy(
                         activeMode = activeMode,
                         banUninstall = isBanUninstall,
@@ -165,10 +155,6 @@ class MainViewModel : ViewModel() {
         unregisterRestartMainReceiver?.invoke()
         client.binderDied()
         authClient.binderDied()
-    }
-
-    private inline fun updateState(crossinline updater: (MainState) -> MainState) {
-        _state.value = updater(state.value)
     }
 
     fun hasRoot(): Boolean {
@@ -259,7 +245,7 @@ class MainViewModel : ViewModel() {
             return
         }
         authClient.setPwd(pwd)
-        updateState {
+        updateState(_state) {
             it.copy(hasPwd = authClient.hasPwd())
         }
     }
@@ -269,7 +255,7 @@ class MainViewModel : ViewModel() {
             return
         }
         authClient.clearPwd()
-        updateState {
+        updateState(_state) {
             it.copy(hasPwd = authClient.hasPwd())
         }
     }
@@ -293,7 +279,7 @@ class MainViewModel : ViewModel() {
         crossinline updater: (MainState) -> MainState
     ) {
         if (oldValue != newValue) {
-            updateState(updater)
+            updateState(_state, updater)
         }
     }
 

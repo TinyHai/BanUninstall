@@ -8,6 +8,7 @@ import kotlinx.parcelize.Parcelize
 @Keep
 @Parcelize
 data class OpRecord(
+    val label: String?,
     val opTypeOrdinal: Int,
     val pkgInfoString: String,
     val callingUid: Int,
@@ -20,8 +21,11 @@ data class OpRecord(
 
     val result get() = OpResult.entries[resultOrdinal]
 
+    val pkgInfo get() = PkgInfo(pkgInfoString)
+
     companion object {
         operator fun invoke(
+            label: String?,
             opType: OpType,
             pkgInfo: PkgInfo,
             callingUid: Int,
@@ -29,6 +33,7 @@ data class OpRecord(
             result: OpResult = OpResult.Unhandled
         ): OpRecord {
             return OpRecord(
+                label,
                 opType.ordinal,
                 pkgInfo.toString(),
                 callingUid,

@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Process
 import androidx.annotation.RequiresApi
 import cn.tinyhai.ban_uninstall.XposedInit
+import cn.tinyhai.ban_uninstall.auth.entities.OpResult
 import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
@@ -35,11 +36,8 @@ class HookSystem(
     @InjectHooker
     lateinit var hooker: Hooker
 
-    private lateinit var lp: XC_LoadPackage.LoadPackageParam
-
     @Initiate
     fun initiate(lp: XC_LoadPackage.LoadPackageParam) {
-        this.lp = lp
         logger.info("OS Version: ${Build.VERSION.SDK_INT}")
         logger.info("OS Manufacturer: ${Build.MANUFACTURER}")
         logger.info("OS Model: ${Build.MODEL}")
@@ -155,7 +153,7 @@ class HookSystem(
         val isShowConfirm = XSharedPrefs.isShowConfirm
         logger.info("(isUseBannedList: $isUseBannedList, isShowConfirm: $isShowConfirm)")
 
-        fun postObserver() {
+        fun notifyObserver() {
             observer2?.let {
                 getPMSHandler(param.thisObject)?.post {
                     logger.info("invoke observer2#onPackageDeleted($packageName, -1, null)")
@@ -185,6 +183,15 @@ class HookSystem(
         }
         val callingUid = Binder.getCallingUid()
         val callingPackageName = getCallingPackageName(Binder.getCallingPid())
+
+        fun onUninstall(result: OpResult) {
+            AuthService.onUninstall(
+                pkgInfo = pkgInfo,
+                callingUid = callingUid,
+                callingPackageName = callingPackageName,
+                result = result
+            )
+        }
         when {
             !isUseBannedList -> {
                 if (isShowConfirm) {
@@ -193,7 +200,7 @@ class HookSystem(
                             invokeOrigin()
                         },
                         onCancel = {
-                            postObserver()
+                            notifyObserver()
                             logger.info("prevent uninstall")
                         },
                         pkgInfo = pkgInfo,
@@ -201,12 +208,8 @@ class HookSystem(
                         callingPackageName = callingPackageName
                     )
                 } else {
-                    postObserver()
-                    AuthService.onPreventUninstall(
-                        pkgInfo = pkgInfo,
-                        callingUid = callingUid,
-                        callingPackageName = callingPackageName
-                    )
+                    notifyObserver()
+                    onUninstall(OpResult.Prevented)
                 }
                 param.result = null
             }
@@ -219,7 +222,7 @@ class HookSystem(
                             invokeOrigin()
                         },
                         onCancel = {
-                            postObserver()
+                            notifyObserver()
                             logger.info("prevent uninstall")
                         },
                         pkgInfo = pkgInfo,
@@ -227,17 +230,14 @@ class HookSystem(
                         callingPackageName = callingPackageName
                     )
                 } else {
-                    postObserver()
-                    AuthService.onPreventUninstall(
-                        pkgInfo = pkgInfo,
-                        callingUid = callingUid,
-                        callingPackageName = callingPackageName
-                    )
+                    notifyObserver()
+                    onUninstall(OpResult.Prevented)
                 }
                 param.result = null
             }
 
             else -> {
+                onUninstall(OpResult.Allowed)
                 logger.info("$packageName:$userId is not in banned list -> pass")
             }
         }
@@ -279,7 +279,7 @@ class HookSystem(
         val isShowConfirm = XSharedPrefs.isShowConfirm
         logger.info("(isUseBannedList: $isUseBannedList, isShowConfirm: $isShowConfirm, isFromAm: $isFromAm)")
 
-        fun postObserver() {
+        fun notifyObserver() {
             observer?.let {
                 getPMSHandler(param.thisObject)?.post {
                     logger.info("invoke observer#onRemoveCompleted($packageName, false)")
@@ -305,6 +305,15 @@ class HookSystem(
         val pkgInfo = PkgInfo(packageName, userId)
         val callingUid = Binder.getCallingUid()
         val callingPackageName = getCallingPackageName(Binder.getCallingPid())
+
+        fun onClearData(result: OpResult) {
+            AuthService.onClearData(
+                pkgInfo = pkgInfo,
+                callingUid = callingUid,
+                callingPackageName = callingPackageName,
+                result = result
+            )
+        }
         when {
             !isUseBannedList -> {
                 if (isShowConfirm) {
@@ -313,7 +322,7 @@ class HookSystem(
                             invokeOrigin()
                         },
                         onCancel = {
-                            postObserver()
+                            notifyObserver()
                             logger.info("prevent clear")
                         },
                         pkgInfo = pkgInfo,
@@ -321,12 +330,8 @@ class HookSystem(
                         callingPackageName = callingPackageName
                     )
                 } else {
-                    postObserver()
-                    AuthService.onPreventClearData(
-                        pkgInfo = pkgInfo,
-                        callingUid = callingUid,
-                        callingPackageName = callingPackageName
-                    )
+                    notifyObserver()
+                    onClearData(OpResult.Prevented)
                 }
                 param.result = if (isFromAm) true else null
             }
@@ -339,7 +344,7 @@ class HookSystem(
                             invokeOrigin()
                         },
                         onCancel = {
-                            postObserver()
+                            notifyObserver()
                             logger.info("prevent clear")
                         },
                         pkgInfo = pkgInfo,
@@ -347,17 +352,14 @@ class HookSystem(
                         callingPackageName = callingPackageName
                     )
                 } else {
-                    postObserver()
-                    AuthService.onPreventClearData(
-                        pkgInfo = pkgInfo,
-                        callingUid = callingUid,
-                        callingPackageName = callingPackageName
-                    )
+                    notifyObserver()
+                    onClearData(OpResult.Prevented)
                 }
                 param.result = if (isFromAm) true else null
             }
 
             else -> {
+                onClearData(OpResult.Allowed)
                 logger.info("${packageName}:$userId is not in banned list -> pass")
             }
         }

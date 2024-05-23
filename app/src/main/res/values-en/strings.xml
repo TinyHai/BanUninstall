@@ -55,4 +55,11 @@
     <string name="title_active_with_root">Activate With Root</string>
     <string name="text_content_activate_with_root">Do you want to activate it with root right now?</string>
     <string name="icon_description_bug_report">Bug Report</string>
+    <string name="text_uninstalled_app">Uninstalled App</string>
+    <string name="text_prevented">Prevented</string>
+    <string name="app_title_operation_record">Operation Records</string>
+    <string name="menulink_view_operation_records">View Operation Records</string>
+    <string name="text_allowed">Allowed</string>
+    <string name="text_unhandled">Unhandled</string>
+    <string name="icon_description_clear_all_records">Clear All Records</string>
 </resources>
