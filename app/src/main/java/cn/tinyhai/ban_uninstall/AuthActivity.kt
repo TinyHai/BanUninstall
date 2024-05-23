@@ -138,13 +138,13 @@ private fun ConfirmDialogContent(
     val unknownApp = stringResource(R.string.text_unknown_app)
     val rootLabel = stringResource(R.string.text_label_root)
     val shellLabel = stringResource(R.string.text_label_shell)
-    val systemShell = stringResource(R.string.text_label_system)
+    val systemLabel = stringResource(R.string.text_label_system)
     val opLabel by produceState("") {
         value = authData.opAppInfo?.loadLabel(context.packageManager)?.toString()
             ?: when (authData.opUid) {
                 0 -> rootLabel
                 2000 -> shellLabel
-                1000 -> systemShell
+                1000 -> systemLabel
                 else -> unknownApp
             }
     }
