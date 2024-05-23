@@ -2,6 +2,7 @@ package cn.tinyhai.ban_uninstall.transact.client
 
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.os.Bundle
 import android.os.IBinder
@@ -57,6 +58,10 @@ class TransactClient(
 
     override fun syncPrefs(prefs: Map<Any?, Any?>?): Boolean {
         return service.syncPrefs(prefs)
+    }
+
+    override fun getApplicationInfoAsUser(packageName: String, userId: Int): ApplicationInfo? {
+        return service.getApplicationInfoAsUser(packageName, userId)
     }
 
     override fun sayHello(hello: String): String {

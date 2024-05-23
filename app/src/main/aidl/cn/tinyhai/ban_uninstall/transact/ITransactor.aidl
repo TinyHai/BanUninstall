@@ -2,6 +2,7 @@
 package cn.tinyhai.ban_uninstall.transact;
 
 import rikka.parcelablelist.ParcelableListSlice;
+import android.content.pm.ApplicationInfo;
 
 // Declare any non-default types here with import statements
 
@@ -25,4 +26,6 @@ interface ITransactor {
     int getActiveMode();
 
     boolean syncPrefs(in Map prefs);
+
+    ApplicationInfo getApplicationInfoAsUser(String packageName, int userId);
 }
