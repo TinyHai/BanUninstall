@@ -6,7 +6,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
@@ -14,18 +13,19 @@ import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.*
-import androidx.compose.ui.window.PopupPositionProvider
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.R
 import cn.tinyhai.ban_uninstall.transact.entities.ActiveMode
+import cn.tinyhai.ban_uninstall.ui.component.TooltipBoxWrapper
 import cn.tinyhai.ban_uninstall.ui.component.rememberConfirmDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberSetPwdDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberVerifyPwdDialog
@@ -38,9 +38,9 @@ import com.alorma.compose.settings.ui.SettingsSwitch
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.generated.destinations.BannedAppScreenDestination
+import com.ramcosta.composedestinations.generated.destinations.OpRecordScreenDestination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Destination<RootGraph>(start = true)
@@ -56,17 +56,8 @@ fun MainScreen(navigator: DestinationsNavigator) {
                     if (state.isActive) {
                         val context = LocalContext.current
                         val scope = rememberCoroutineScope()
-                        TooltipBox(
-                            positionProvider = rememberTooltipPositionProvider(),
-                            tooltip = {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
-                                    shape = RoundedCornerShape(4.dp),
-                                ) {
-                                    Text(text = stringResource(R.string.icon_description_say_hello))
-                                }
-                            },
-                            state = rememberTooltipState()
+                        TooltipBoxWrapper(
+                            tooltipText = stringResource(R.string.icon_description_say_hello)
                         ) {
                             IconButton(onClick = { viewModel.sayHello() }) {
                                 Icon(
@@ -76,18 +67,7 @@ fun MainScreen(navigator: DestinationsNavigator) {
                             }
                         }
                         if (BuildConfig.ROOT_FEATURE) {
-                            TooltipBox(
-                                positionProvider = rememberTooltipPositionProvider(),
-                                tooltip = {
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.secondaryContainer,
-                                        shape = RoundedCornerShape(4.dp),
-                                    ) {
-                                        Text(text = stringResource(R.string.icon_description_bug_report))
-                                    }
-                                },
-                                state = rememberTooltipState()
-                            ) {
+                            TooltipBoxWrapper(tooltipText = stringResource(R.string.icon_description_bug_report)) {
                                 IconButton(
                                     onClick = {
                                         scope.launch {
@@ -133,6 +113,7 @@ fun MainScreen(navigator: DestinationsNavigator) {
             onDevMode = viewModel::onDevMode,
             onUseBannedList = viewModel::onUseBannedList,
             gotoBannedApp = { navigator.navigate(BannedAppScreenDestination()) },
+            gotoOpRecord = { navigator.navigate(OpRecordScreenDestination()) },
             onShowConfirm = viewModel::onShowConfirm,
             onVerifyPwd = viewModel::onVerifyPwd,
             onSetPwd = viewModel::onSetPwd,
@@ -155,6 +136,7 @@ private fun MainScreenContent(
     onDevMode: (Boolean) -> Unit,
     onUseBannedList: (Boolean) -> Unit,
     gotoBannedApp: () -> Unit,
+    gotoOpRecord: () -> Unit,
     onShowConfirm: (Boolean) -> Unit,
     onVerifyPwd: (String) -> Boolean,
     onSetPwd: (String) -> Unit,
@@ -164,7 +146,7 @@ private fun MainScreenContent(
     Column(modifier) {
         StatusGroup(state, hasRoot, onActiveWithRoot)
         FunctionGroup(state, onVerifyPwd, onBanUninstall, onBanClearData, onAutoStart, onDevMode)
-        AdvanceGroup(state, onVerifyPwd, onUseBannedList, gotoBannedApp)
+        AdvanceGroup(state, onVerifyPwd, onUseBannedList, gotoBannedApp, gotoOpRecord)
         SecurityGroup(state, onShowConfirm, onVerifyPwd, onSetPwd, onClearPwd)
     }
 }
@@ -286,7 +268,8 @@ private fun AdvanceGroup(
     state: MainState,
     onVerifyPwd: (String) -> Boolean,
     onUseBannedList: (Boolean) -> Unit,
-    gotoBannedApp: () -> Unit
+    gotoBannedApp: () -> Unit,
+    gotoOpRecord: () -> Unit
 ) {
     val verifyPwdDialogHandle = rememberVerifyPwdDialog(
         title = stringResource(id = R.string.title_verify_password),
@@ -322,6 +305,12 @@ private fun AdvanceGroup(
                     gotoBannedApp()
                 }
             }
+        }
+        SettingsMenuLink(
+            enabled = state.isActive,
+            title = { Text(text = stringResource(R.string.menulink_view_operation_records)) },
+        ) {
+            gotoOpRecord()
         }
     }
 }
@@ -390,25 +379,6 @@ private fun SecurityGroup(
             }
         ) {
             onShowConfirm(it)
-        }
-    }
-}
-
-@Composable
-private fun rememberTooltipPositionProvider(): PopupPositionProvider {
-    val spacing = with(LocalDensity.current) { 4.dp.toPx().roundToInt() }
-    return remember {
-        object : PopupPositionProvider {
-            override fun calculatePosition(
-                anchorBounds: IntRect,
-                windowSize: IntSize,
-                layoutDirection: LayoutDirection,
-                popupContentSize: IntSize
-            ): IntOffset {
-                val x = anchorBounds.left + ((anchorBounds.width - popupContentSize.width) / 2)
-                val y = anchorBounds.bottom + spacing
-                return IntOffset(x, y)
-            }
         }
     }
 }

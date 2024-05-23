@@ -54,4 +54,11 @@
     <string name="title_active_with_root">使用Root激活</string>
     <string name="text_content_activate_with_root">是否立即使用Root权限激活？</string>
     <string name="icon_description_bug_report">抓取日志</string>
+    <string name="text_uninstalled_app">已卸载的应用</string>
+    <string name="text_prevented">已阻止</string>
+    <string name="app_title_operation_record">操作记录</string>
+    <string name="menulink_view_operation_records">查看操作记录</string>
+    <string name="text_allowed">已允许</string>
+    <string name="text_unhandled">未处理</string>
+    <string name="icon_description_clear_all_records">清除所有记录</string>
 </resources>
