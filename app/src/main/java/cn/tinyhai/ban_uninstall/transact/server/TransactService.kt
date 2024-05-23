@@ -136,6 +136,15 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
         }
     }
 
+    override fun getApplicationInfoAsUser(packageName: String, userId: Int): ApplicationInfo? {
+        val ident = Binder.clearCallingIdentity()
+        return try {
+            pm.getApplicationInfo(packageName, 0, userId)
+        } finally {
+            Binder.restoreCallingIdentity(ident)
+        }
+    }
+
     override fun contains(packageName: String, userId: Int): Boolean {
         return helper.allBannedPkgInfo.contains(PkgInfo(packageName, userId))
     }
