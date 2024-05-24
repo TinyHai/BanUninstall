@@ -50,6 +50,5 @@ class AuthViewModel : ViewModel() {
             onPrevent()
             handled = true
         }
-        authClient.binderDied()
     }
 }

@@ -4,7 +4,6 @@ import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
 import android.os.IBinder
-import android.os.IBinder.DeathRecipient
 import android.util.Log
 import cn.tinyhai.ban_uninstall.AuthActivity
 import cn.tinyhai.ban_uninstall.BuildConfig
@@ -15,11 +14,7 @@ import java.security.MessageDigest
 
 class AuthClient(
     private var service: IAuth
-) : IAuth, DeathRecipient {
-
-    init {
-        service.asBinder()?.linkToDeath(this, 0)
-    }
+) : IAuth {
 
     override fun asBinder(): IBinder? {
         return service.asBinder()
@@ -69,11 +64,6 @@ class AuthClient(
         }.getOrElse { "" }
     }
 
-    override fun binderDied() {
-        service.asBinder()?.unlinkToDeath(this, 0)
-        service = IAuth.Default()
-    }
-
     companion object {
         private const val TAG = "AuthClient"
         private const val KEY_AUTH = "key_auth"
@@ -94,7 +84,6 @@ class AuthClient(
             val binder = intent.extras?.getBinder(KEY_AUTH)
             Log.d(TAG, "$binder")
             if (binder != null) {
-                client?.binderDied()
                 client = AuthClient(IAuth.Stub.asInterface(binder))
             }
         }
