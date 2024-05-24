@@ -153,8 +153,6 @@ class MainViewModel : ViewModel() {
         super.onCleared()
         SharedPrefs.prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         unregisterRestartMainReceiver?.invoke()
-        client.binderDied()
-        authClient.binderDied()
     }
 
     fun hasRoot(): Boolean {

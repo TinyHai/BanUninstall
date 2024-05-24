@@ -15,10 +15,9 @@ import rikka.parcelablelist.ParcelableListSlice
 
 class TransactClient(
     private var service: ITransactor
-) : ITransactor, IBinder.DeathRecipient {
+) : ITransactor {
 
     init {
-        service.asBinder()?.linkToDeath(this, 0)
         service.onAppLaunched()
     }
 
@@ -76,11 +75,6 @@ class TransactClient(
         service.reloadPrefs()
     }
 
-    override fun binderDied() {
-        service.asBinder()?.unlinkToDeath(this, 0)
-        service = ITransactor.Default()
-    }
-
     companion object {
         private const val TAG = "TransactClient"
 
@@ -98,7 +92,6 @@ class TransactClient(
             val binder = intent.extras?.getBinder(KEY_TRANSACT)
             Log.d(TAG, "$binder")
             if (binder != null) {
-                client?.binderDied()
                 client = TransactClient(ITransactor.Stub.asInterface(binder))
             }
         }
