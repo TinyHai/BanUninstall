@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlinParcelize)
+    alias(libs.plugins.composeCompiler)
 }
 
 fun String.execute(): String {
@@ -93,13 +94,12 @@ android {
         buildConfig = true
         aidl = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.12"
-    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }

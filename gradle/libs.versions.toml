@@ -1,24 +1,19 @@
 [versions]
-agp = "8.3.2"
+agp = "8.4.0"
 androidx-appcompat = "1.6.1"
 biometric = "1.2.0-alpha05"
 libsu = "5.2.2"
-kotlin = "1.9.23"
+kotlin = "2.0.0"
 kotlinpoet = "1.16.0"
-ksp = "1.9.23-1.0.19"
+ksp = "2.0.0-1.0.21"
 xposed-api = "82"
-compose-bom = "2024.04.01"
+compose-bom = "2024.05.00"
 activity-compose = "1.9.0"
 compose-settings = "2.1.0"
 parcelablelist = "2.0.1"
 compose-destination = "2.0.0-beta01"
 coil = "2.6.0"
-jetbrains-kotlin-jvm = "1.9.0"
-core-ktx = "1.13.0"
-junit = "4.13.2"
-androidx-junit = "1.1.5"
-espresso-core = "3.5.1"
-material = "1.11.0"
+jetbrains-kotlin-jvm = "1.9.10"
 
 [libraries]
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
@@ -43,15 +38,11 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 ksp-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-junit" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 jetbrainsKotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 jetbrainsKotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrains-kotlin-jvm" }
