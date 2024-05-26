@@ -3,7 +3,6 @@ package cn.tinyhai.ban_uninstall.vm
 import android.graphics.drawable.Drawable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.auth.IAuth
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient
@@ -33,6 +32,10 @@ data class OpRecordInfo(
 data class OpRecordState(
     val isRefreshing: Boolean = false,
     val hasPwd: Boolean = false,
+    val showAllowed: Boolean = true,
+    val showPrevented: Boolean = true,
+    val showUninstall: Boolean = true,
+    val showClearData: Boolean = true,
     val records: List<OpRecordInfo> = emptyList()
 ) {
     companion object {
@@ -88,6 +91,30 @@ class OpRecordViewModel : ViewModel() {
             updateState(_state) {
                 it.copy(records = records, isRefreshing = false)
             }
+        }
+    }
+
+    fun showAllowed(show: Boolean) {
+        updateState(_state) {
+            it.copy(showAllowed = show)
+        }
+    }
+
+    fun showPrevented(show: Boolean) {
+        updateState(_state) {
+            it.copy(showPrevented = show)
+        }
+    }
+
+    fun showUninstall(show: Boolean) {
+        updateState(_state) {
+            it.copy(showUninstall = show)
+        }
+    }
+
+    fun showClearData(show: Boolean) {
+        updateState(_state) {
+            it.copy(showClearData = show)
         }
     }
 

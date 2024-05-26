@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.outlined.Add
@@ -42,9 +41,12 @@ import cn.tinyhai.ban_uninstall.transact.entities.PkgInfo
 import cn.tinyhai.ban_uninstall.ui.component.SearchAppBar
 import cn.tinyhai.ban_uninstall.vm.AppInfo
 import cn.tinyhai.ban_uninstall.vm.BannedAppViewModel
-import cn.tinyhai.compose.dragdrop.*
+import cn.tinyhai.compose.dragdrop.AnimatedDragDropBox
+import cn.tinyhai.compose.dragdrop.LocalDragDrop
 import cn.tinyhai.compose.dragdrop.modifier.dragTarget
 import cn.tinyhai.compose.dragdrop.modifier.dropTarget
+import cn.tinyhai.compose.dragdrop.rememberDragTargetState
+import cn.tinyhai.compose.dragdrop.rememberDropTargetState
 import coil.compose.AsyncImage
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
@@ -76,7 +78,9 @@ fun BannedAppScreen(navigator: DestinationsNavigator) {
         }
     }
 
-    Box(
+    AnimatedDragDropBox(
+        scale = 1.5f,
+        alpha = 0.6f,
         modifier = Modifier
             .navigationBarsPadding()
             .fillMaxSize()
@@ -108,12 +112,8 @@ fun BannedAppScreen(navigator: DestinationsNavigator) {
                     onSearchTextChange = viewModel::onQueryChange,
                     onSearchStart = { viewModel.clearSelected() },
                     onClearClick = viewModel::onSearchClear,
-                    onBackClick = {
-                        if (state.query.isNotBlank()) {
-                            viewModel.onSearchClear()
-                        } else {
-                            navigator.navigateUp()
-                        }
+                    navigationUp = {
+                        navigator.navigateUp()
                     }
                 )
             },

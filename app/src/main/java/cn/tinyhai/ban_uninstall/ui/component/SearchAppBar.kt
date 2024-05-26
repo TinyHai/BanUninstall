@@ -1,5 +1,7 @@
 package cn.tinyhai.ban_uninstall.ui.component
 
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,7 +34,7 @@ fun SearchAppBar(
     onSearchTextChange: (String) -> Unit,
     onSearchStart: () -> Unit,
     onClearClick: () -> Unit,
-    onBackClick: (() -> Unit)? = null,
+    navigationUp: () -> Unit,
     onConfirm: (() -> Unit)? = null,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -49,6 +51,12 @@ fun SearchAppBar(
         onDispose {
             keyboardController?.hide()
         }
+    }
+
+    fun exitSearch() {
+        onSearch = false
+        keyboardController?.hide()
+        onClearClick()
     }
 
     TopAppBar(
@@ -74,7 +82,7 @@ fun SearchAppBar(
                             .padding(
                                 top = 2.dp,
                                 bottom = 2.dp,
-                                end = if (onBackClick != null) 0.dp else 14.dp
+                                end = if (navigationUp != null) 0.dp else 14.dp
                             )
                             .focusRequester(focusRequester)
                             .onFocusChanged { focusState ->
@@ -85,9 +93,7 @@ fun SearchAppBar(
                         trailingIcon = {
                             IconButton(
                                 onClick = {
-                                    onSearch = false
-                                    keyboardController?.hide()
-                                    onClearClick()
+                                    exitSearch()
                                 },
                                 content = { Icon(Icons.Filled.Close, null) }
                             )
@@ -107,12 +113,18 @@ fun SearchAppBar(
             }
         },
         navigationIcon = {
-            if (onBackClick != null) {
-                IconButton(
-                    onClick = onBackClick,
-                    content = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
-                )
+            val onBack = {
+                if (onSearch) {
+                    exitSearch()
+                } else {
+                    navigationUp()
+                }
             }
+            BackHandler(onBack = onBack)
+            IconButton(
+                onClick = onBack,
+                content = { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+            )
         },
         actions = {
             AnimatedVisibility(

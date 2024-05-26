@@ -8,8 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.ui.theme.AppTheme
-import cn.tinyhai.compose.dragdrop.AnimatedDragDropBox
 import com.ramcosta.composedestinations.DestinationsNavHost
+import com.ramcosta.composedestinations.animations.defaults.DefaultFadingTransitions
 import com.ramcosta.composedestinations.generated.NavGraphs
 
 class MainActivity : ComponentActivity() {
@@ -20,12 +20,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                AnimatedDragDropBox(
-                    scale = 1.5f,
-                    alpha = 0.6f,
-                ) {
-                    DestinationsNavHost(NavGraphs.root)
-                }
+                DestinationsNavHost(NavGraphs.root, defaultTransitions = DefaultFadingTransitions)
             }
         }
     }

@@ -44,6 +44,10 @@ class AuthClient(
         service.prevent(opId)
     }
 
+    override fun isValid(opId: Int): Boolean {
+        return service.isValid(opId)
+    }
+
     override fun getAllOpRecord(): List<OpRecord> {
         return service.allOpRecord ?: emptyList()
     }
@@ -103,8 +107,6 @@ class AuthClient(
                 putExtras(bundle)
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK
-                        or Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-                        or Intent.FLAG_ACTIVITY_NO_HISTORY
                 )
             }
         }

@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
+import android.util.Log
 import android.view.Window
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
@@ -12,10 +13,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -57,10 +55,17 @@ class AuthActivity : AppCompatActivity() {
 
         viewModel.setup(authClient, authData)
 
+        if (!viewModel.isValid()) {
+            finish()
+            return
+        }
+
         onBackPressedDispatcher.addCallback {
             viewModel.onPrevent()
             finish()
         }
+
+        Log.i(TAG, "$this: $authData")
 
         setContent {
             AppTheme {
@@ -125,6 +130,10 @@ class AuthActivity : AppCompatActivity() {
         }
         finish()
     }
+
+    override fun finish() {
+        super.finishAndRemoveTask()
+    }
 }
 
 @Composable
@@ -159,17 +168,23 @@ private fun ConfirmDialogContent(
         append(stringResource(id = R.string.text_try_op, opTypeText.lowercase()))
     }
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(28.dp),
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .widthIn(280.dp, 560.dp)
+                .padding(24.dp),
+        ) {
             Text(
                 text = opTypeText,
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineSmall
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = opContentText)
-            AppInfoContent(authData.appInfo)
-            Spacer(modifier = Modifier.height(16.dp))
+            Text(text = opContentText, style = MaterialTheme.typography.bodyLarge)
+            ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
+                AppInfoContent(authData.appInfo)
+            }
+            Spacer(modifier = Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = { onCancel() }) {
                     Text(text = stringResource(R.string.text_prevent))

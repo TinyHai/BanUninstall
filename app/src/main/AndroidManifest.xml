@@ -45,10 +45,11 @@
 
         <activity
             android:name=".AuthActivity"
-            android:excludeFromRecents="true"
             android:exported="false"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
             android:noHistory="true"
-            android:taskAffinity=".Auth"
+            android:windowSoftInputMode="stateAlwaysHidden"
             android:theme="@style/Theme.AppCompat.DayNight.Dialog" />
 
         <receiver

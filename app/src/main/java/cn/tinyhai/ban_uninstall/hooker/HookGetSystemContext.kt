@@ -2,6 +2,7 @@ package cn.tinyhai.ban_uninstall.hooker
 
 import android.content.Context
 import cn.tinyhai.ban_uninstall.XposedInit
+import cn.tinyhai.ban_uninstall.receiver.PackageChangeReceiver
 import cn.tinyhai.ban_uninstall.receiver.RestartMainReceiver
 import cn.tinyhai.ban_uninstall.transact.entities.ActiveMode
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
@@ -9,7 +10,6 @@ import cn.tinyhai.ban_uninstall.utils.SystemContextHolder
 import cn.tinyhai.xp.annotation.*
 import cn.tinyhai.xp.hook.logger.XPLogger
 import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
@@ -76,6 +76,7 @@ class HookGetSystemContext(
         logger.info("systemContext: $systemContext")
         systemContext?.let {
             SystemContextHolder.onSystemContext(it)
+            PackageChangeReceiver().register(it)
             if (XposedInit.activeMode == ActiveMode.Root) {
                 RestartMainReceiver.send(it)
             }

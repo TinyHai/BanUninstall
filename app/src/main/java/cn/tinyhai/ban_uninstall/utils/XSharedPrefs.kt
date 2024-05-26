@@ -6,7 +6,9 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.os.Handler
 import cn.tinyhai.ban_uninstall.App
 import cn.tinyhai.ban_uninstall.BuildConfig
+import cn.tinyhai.ban_uninstall.auth.server.AuthService
 import cn.tinyhai.ban_uninstall.configs.Configs
+import cn.tinyhai.ban_uninstall.receiver.PackageChangeReceiver
 import cn.tinyhai.ban_uninstall.transact.server.TransactService
 import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_FILE_NAME
 import cn.tinyhai.ban_uninstall.utils.SPHost.Companion.SP_KEY_BAN_CLEAR_DATA
@@ -99,63 +101,6 @@ object XSharedPrefs : SPHost {
 
         XPLogUtils.log(xprefs.file.absolutePath)
         XPLogUtils.log(prefs.toString())
-
-        SystemContextHolder.registerCallback {
-            onSystemContext(it)
-        }
-    }
-
-    private val registerReceiverForAllUsers by lazy {
-        try {
-            Context::class.java.getDeclaredMethod(
-                "registerReceiverForAllUsers",
-                BroadcastReceiver::class.java,
-                IntentFilter::class.java,
-                String::class.java,
-                Handler::class.java
-            )
-        } catch (e: NoSuchMethodException) {
-            null
-        }
-    }
-
-    private fun onSystemContext(context: Context) {
-        XPLogUtils.log("start listen self remove broadcast")
-        val intentFilter = IntentFilter().apply {
-            addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
-            addDataScheme("package")
-        }
-
-        val receiver = object : BroadcastReceiver() {
-            private val getSendingUserId by lazy {
-                BroadcastReceiver::class.java.getDeclaredMethod("getSendingUserId")
-                    .also { it.isAccessible = true }
-            }
-
-            override fun onReceive(context: Context, intent: Intent) {
-                val sendingUserId = getSendingUserId.invoke(this) as Int
-                val uri = intent.data
-                val packageName = uri?.encodedSchemeSpecificPart
-                XPLogUtils.log("pkg uninstall uri = $uri, userId = $sendingUserId")
-                packageName?.let {
-                    TransactService.onPkgUninstall(packageName, sendingUserId)
-                }
-                if (intentFilter.hasAction(intent.action) && sendingUserId == 0 && packageName == BuildConfig.APPLICATION_ID) {
-                    XPLogUtils.log("self package removed")
-                    Configs.onSelfRemoved()
-                }
-            }
-        }
-        registerReceiverForAllUsers?.let {
-            it.invoke(
-                context,
-                receiver,
-                intentFilter,
-                null,
-                null
-            )
-            Unit
-        } ?: context.registerReceiver(receiver, intentFilter)
     }
 
     override val isBanUninstall by BooleanPreference(SP_KEY_BAN_UNINSTALL, true)
