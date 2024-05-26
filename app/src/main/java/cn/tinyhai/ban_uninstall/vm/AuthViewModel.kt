@@ -40,6 +40,10 @@ class AuthViewModel : ViewModel() {
         handled = true
     }
 
+    fun isValid(): Boolean {
+        return authClient.isValid(authData.opId)
+    }
+
     fun authenticate(pwd: String): Boolean {
         return authClient.authenticate(pwd)
     }

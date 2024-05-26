@@ -205,38 +205,53 @@ object AuthService : IAuth.Stub() {
 
     private fun wrapWithPendingOp(
         opRecord: OpRecord,
-        onConfirm: () -> Unit,
-        onCancel: () -> Unit
+        onAgree: () -> Unit,
+        onPrevent: () -> Unit
     ): PendingOpList.PendingOp {
         return object : PendingOpList.PendingOp {
-            override fun confirm() {
-                onConfirm()
+            override fun agree() {
+                onAgree()
                 opRecordList.add(opRecord, OpResult.Allowed)
             }
 
-            override fun cancel() {
-                onCancel()
+            override fun prevent() {
+                onPrevent()
                 opRecordList.add(opRecord, OpResult.Prevented)
             }
         }
     }
 
     override fun agree(opId: Int) {
-        val calling = Binder.clearCallingIdentity()
+        val ident = Binder.clearCallingIdentity()
         try {
-            pendingOp.remove(opId)?.confirm()
+            pendingOp.remove(opId)?.agree()
         } finally {
-            Binder.restoreCallingIdentity(calling)
+            Binder.restoreCallingIdentity(ident)
         }
     }
 
     override fun prevent(opId: Int) {
-        val calling = Binder.clearCallingIdentity()
+        val ident = Binder.clearCallingIdentity()
         try {
-            pendingOp.remove(opId)?.cancel()
+            pendingOp.remove(opId)?.prevent()
         } finally {
-            Binder.restoreCallingIdentity(calling)
+            Binder.restoreCallingIdentity(ident)
         }
+    }
+
+    fun preventAll() {
+        val ident = Binder.clearCallingIdentity()
+        try {
+            pendingOp.removeAll().forEach {
+                it.prevent()
+            }
+        } finally {
+            Binder.restoreCallingIdentity(ident)
+        }
+    }
+
+    override fun isValid(opId: Int): Boolean {
+        return pendingOp.contains(opId)
     }
 
     override fun getAllOpRecord(): List<OpRecord> {

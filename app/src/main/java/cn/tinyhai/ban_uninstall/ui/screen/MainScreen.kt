@@ -4,6 +4,8 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +22,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.tinyhai.ban_uninstall.BuildConfig
@@ -152,6 +155,23 @@ private fun MainScreenContent(
 }
 
 @Composable
+private fun SettingsSection(
+    title: String,
+    enabled: Boolean = true,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    SettingsGroup(
+        enabled = enabled,
+        title = { Text(text = title) },
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        ElevatedCard {
+            content()
+        }
+    }
+}
+
+@Composable
 private fun FunctionGroup(
     state: MainState,
     onVerifyPwd: (String) -> Boolean,
@@ -166,14 +186,12 @@ private fun FunctionGroup(
         onVerify = onVerifyPwd
     )
     val scope = rememberCoroutineScope()
-    SettingsGroup(
-        title = {
-            Text(text = stringResource(R.string.group_title_function))
-        }
+    SettingsSection(
+        title = stringResource(R.string.group_title_function),
+        enabled = state.isActive,
     ) {
         SettingsSwitch(
             state = state.banUninstall,
-            enabled = state.isActive,
             title = { Text(text = stringResource(R.string.switch_title_ban_uninstall)) },
         ) {
             scope.launch {
@@ -185,7 +203,6 @@ private fun FunctionGroup(
         }
         SettingsSwitch(
             state = state.banClearData,
-            enabled = state.isActive,
             title = { Text(text = stringResource(R.string.switch_title_ban_clear_data)) },
         ) {
             scope.launch {
@@ -206,7 +223,6 @@ private fun FunctionGroup(
         }
         SettingsSwitch(
             state = state.devMode,
-            enabled = state.isActive,
             title = { Text(text = stringResource(R.string.switch_title_dev_mode)) },
         ) {
             onDevMode(it)
@@ -221,10 +237,8 @@ private fun StatusGroup(state: MainState, hasRoot: () -> Boolean, onActiveWithRo
         content = stringResource(R.string.text_content_activate_with_root)
     )
     val scope = rememberCoroutineScope()
-    SettingsGroup(
-        title = {
-            Text(text = stringResource(R.string.group_title_module_status))
-        }
+    SettingsSection(
+        title = stringResource(R.string.group_title_module_status)
     ) {
         val moduleStatus =
             stringResource(if (state.isActive) R.string.module_status_active else R.string.module_status_disable)
@@ -277,14 +291,12 @@ private fun AdvanceGroup(
         onVerify = onVerifyPwd
     )
     val scope = rememberCoroutineScope()
-    SettingsGroup(
-        title = {
-            Text(text = stringResource(R.string.group_title_advanced))
-        }
+    SettingsSection(
+        enabled = state.isActive,
+        title = stringResource(R.string.group_title_advanced)
     ) {
         SettingsSwitch(
             state = state.useBannedList,
-            enabled = state.isActive,
             title = { Text(text = stringResource(R.string.switch_title_use_banned_list)) },
         ) {
             scope.launch {
@@ -307,7 +319,6 @@ private fun AdvanceGroup(
             }
         }
         SettingsMenuLink(
-            enabled = state.isActive,
             title = { Text(text = stringResource(R.string.menulink_view_operation_records)) },
         ) {
             gotoOpRecord()
@@ -332,14 +343,12 @@ private fun SecurityGroup(
         title = stringResource(id = R.string.title_set_password),
     )
     val scope = rememberCoroutineScope()
-    SettingsGroup(
-        title = {
-            Text(text = stringResource(R.string.group_title_security))
-        }
+    SettingsSection(
+        enabled = state.isActive,
+        title = stringResource(R.string.group_title_security)
     ) {
         SettingsSwitch(
             state = state.hasPwd,
-            enabled = state.isActive,
             title = { Text(text = stringResource(R.string.switch_title_use_separate_password)) },
             subtitle = {
                 Text(text = stringResource(R.string.switch_subtitle_use_separate_password))
@@ -372,7 +381,6 @@ private fun SecurityGroup(
         }
         SettingsSwitch(
             state = state.showConfirm,
-            enabled = state.isActive,
             title = { Text(text = stringResource(R.string.switch_title_show_confirm)) },
             subtitle = {
                 Text(text = stringResource(R.string.switch_subtitle_show_confirm))

@@ -41,11 +41,12 @@ fun TooltipBoxWrapper(
         positionProvider = rememberTooltipPositionProvider(),
         tooltip = {
             Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(4.dp),
+                color = MaterialTheme.colorScheme.inverseSurface,
+                shape = ShapeDefaults.ExtraSmall,
             ) {
                 Text(
                     text = tooltipText,
+                    style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(4.dp)
                 )
             }

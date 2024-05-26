@@ -61,4 +61,5 @@
     <string name="text_allowed">已允许</string>
     <string name="text_unhandled">未处理</string>
     <string name="icon_description_clear_all_records">清除所有记录</string>
+    <string name="icon_description_filter_list">过滤列表</string>
 </resources>

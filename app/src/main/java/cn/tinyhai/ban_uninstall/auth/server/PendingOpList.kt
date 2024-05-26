@@ -1,6 +1,7 @@
 package cn.tinyhai.ban_uninstall.auth.server
 
 import android.util.SparseArray
+import androidx.core.util.valueIterator
 
 class PendingOpList {
     private var counter = 0
@@ -15,14 +16,28 @@ class PendingOpList {
         }
     }
 
+    fun contains(opId: Int): Boolean {
+        return synchronized(pending) {
+            pending[opId] != null
+        }
+    }
+
     fun remove(opId: Int): PendingOp? {
         return synchronized(pending) {
             pending[opId]?.also { pending.remove(opId) }
         }
     }
 
+    fun removeAll(): List<PendingOp> {
+        return synchronized(pending) {
+            Iterable { pending.valueIterator() }.toList().also {
+                pending.clear()
+            }
+        }
+    }
+
     interface PendingOp {
-        fun confirm()
-        fun cancel()
+        fun agree()
+        fun prevent()
     }
 }

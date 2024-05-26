@@ -12,6 +12,7 @@ interface IAuth {
     boolean authenticate(String sha256);
     oneway void agree(int opId);
     oneway void prevent(int opId);
+    boolean isValid(int opId);
 
     List<OpRecord> getAllOpRecord();
     void clearAllOpRecord();
