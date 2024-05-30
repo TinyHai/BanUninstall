@@ -1,1 +1,3 @@
-- Support Brazilian Portuguese by @baianohak
+- 添加操作记录功能
+- 一些UI调整
+- 更新版本号
