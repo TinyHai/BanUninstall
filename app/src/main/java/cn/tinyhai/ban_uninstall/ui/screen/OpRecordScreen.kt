@@ -183,7 +183,7 @@ private fun OpRecordList(
     val refreshState = rememberPullRefreshState(refreshing = isRefreshing, onRefresh = onRefreshing)
     val groupedRecords = records.groupBy {
         val date = it.opDate
-        Date(date.year, date.month, date.day)
+        Date(date.year, date.month, date.date)
     }
     Box(modifier = modifier.pullRefresh(refreshState)) {
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp)) {
