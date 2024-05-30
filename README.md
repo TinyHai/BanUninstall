@@ -9,18 +9,22 @@ To translate BanUninstall to your language, please use [Crowdin](https://crowdin
 
 
 ### Screenshots
-|                    1                     |                    2                     |                    3                     |
-|:----------------------------------------:|:----------------------------------------:|:----------------------------------------:|
-| <img src="screenshots/screenshot1.jpg"/> | <img src="screenshots/screenshot2.jpg"/> | <img src="screenshots/screenshot3.jpg"/> |
+|                     1                      |                    2                     |                    3                     |                    4                     |
+|:------------------------------------------:|:----------------------------------------:|:----------------------------------------:|:----------------------------------------:|
+|  <img src="screenshots/screenshot1.jpg"/>  | <img src="screenshots/screenshot2.jpg"/> | <img src="screenshots/screenshot3.jpg"/> | <img src="screenshots/screenshot4.jpg"/> |
+
 
 ### Compatibility
 Xposed:
 
 Android 5.0 - Android 14
 
+> Please don't activate with root when any Xposed Framework is running
+
 Root:
 
 Android 8.1 - Android 14
+
 
 I have tested with my phone on Android 14, and it works well. I can't ensure it works on your phone.
 
