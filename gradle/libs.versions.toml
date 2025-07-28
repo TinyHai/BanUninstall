@@ -2,10 +2,14 @@
 agp = "8.4.0"
 androidx-appcompat = "1.6.1"
 biometric = "1.2.0-alpha05"
+junit = "4.13.2"
+junit-jupiter = "5.8.1"
 libsu = "5.2.2"
 kotlin = "2.0.0"
 kotlinpoet = "1.16.0"
 ksp = "2.0.0-1.0.21"
+mockito-inline = "5.2.0"
+mockito-kotlin = "5.3.1"
 xposed-api = "82"
 compose-bom = "2024.05.00"
 activity-compose = "1.9.0"
@@ -18,7 +22,11 @@ jetbrains-kotlin-jvm = "1.9.10"
 [libraries]
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
+junit = { module = "junit:junit", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 libsu-core = { group = "com.github.topjohnwu.libsu", name = "core", version.ref = "libsu" }
+mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito-inline" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
 xposed-api = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed-api" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }

@@ -64,8 +64,14 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
             val list = arrayListOf<PackageInfo>()
             val userIds = um.getProfileIds(Process.myUid() / 100_000, true)
             for (userId in userIds) {
-                pm.getInstalledPackages(0, userId).list.filter {
-                    it.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getInstalledPackages(0L, userId).list.filter {
+                        it.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0
+                    }
+                } else {
+                    pm.getInstalledPackages(0, userId).list.filter {
+                        it.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0
+                    }
                 }.let {
                     list.addAll(it)
                 }
@@ -139,7 +145,11 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
     override fun getApplicationInfoAsUser(packageName: String, userId: Int): ApplicationInfo? {
         val ident = Binder.clearCallingIdentity()
         return try {
-            pm.getApplicationInfo(packageName, 0, userId)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getApplicationInfo(packageName, 0L, userId)
+            } else {
+                pm.getApplicationInfo(packageName, 0, userId)
+            }
         } finally {
             Binder.restoreCallingIdentity(ident)
         }
