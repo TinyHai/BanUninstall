@@ -73,6 +73,7 @@ object AuthService : IAuth.Stub() {
                 TransactService.getApplicationInfoAsUser(callingPackageName, callingUid / 100_000)
             startAuthActivity(opId, OpType.ClearData, appInfo, callingUid, callingAppInfo)
         }.onSuccess {
+            XPLogUtils.log("startAuthActivity success: $it")
             if (!it) {
                 prevent(opId)
             }
@@ -192,6 +193,7 @@ object AuthService : IAuth.Stub() {
                     appInfo = appInfo
                 )
                 val intent = AuthClient.buildAuthIntent(AuthService, authData)
+                XPLogUtils.log("startAuthActivity intent: $intent")
                 if (packageManager.resolveActivity(intent, 0) != null) {
                     startActivity(intent)
                     success = true
