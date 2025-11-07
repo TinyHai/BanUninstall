@@ -18,9 +18,20 @@ class HookInjectSelf {
 
     @MethodHooker(
         className = "android.app.servertransaction.LaunchActivityItem",
+        methodName = "",
+        hookType = HookType.BeforeMethod,
+        minSdkInclusive = Build.VERSION_CODES.BAKLAVA
+    )
+    fun beforeConstructors(param: XC_MethodHook.MethodHookParam) {
+        handleLaunchActivity(param)
+    }
+
+    @MethodHooker(
+        className = "android.app.servertransaction.LaunchActivityItem",
         methodName = "obtain",
         hookType = HookType.BeforeMethod,
-        minSdkInclusive = Build.VERSION_CODES.P
+        minSdkInclusive = Build.VERSION_CODES.P,
+        maxSdkExclusive = Build.VERSION_CODES.BAKLAVA
     )
     fun beforeObtain(param: XC_MethodHook.MethodHookParam) {
         handleLaunchActivity(param)
