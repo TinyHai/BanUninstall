@@ -76,11 +76,19 @@ interface HookerHelper {
     fun findAndHookFirst(
         clazz: Class<*>, methodName: String, callback: XC_MethodHook
     ): Unhook? {
-        val hooker = clazz.declaredMethods.firstOrNull { it.name == methodName }?.let {
-            XposedBridge.hookMethod(it, callback).also {
-                logger.verbose("hook ${clazz.canonicalName}#$methodName success")
+        val hooker = if (methodName == "") {
+            XposedBridge.hookAllConstructors(clazz, callback).also {
+                logger.verbose("hook ${clazz.canonicalName}#(all constructors) success")
+            } as Unhook?
+        } else {
+            clazz.declaredMethods.firstOrNull { it.name == methodName }?.let {
+                XposedBridge.hookMethod(it, callback).also {
+                    logger.verbose("hook ${clazz.canonicalName}#$methodName success")
+                }
             }
+
         }
+
         if (hooker == null) {
             logger.error("hook ${clazz.canonicalName}#$methodName failed !!!!!")
         }
