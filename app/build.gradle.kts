@@ -22,7 +22,7 @@ val allArch: Array<String> by rootProject.ext
 
 android {
     namespace = "cn.tinyhai.ban_uninstall"
-    compileSdk = 34
+    compileSdk = 36
 
     signingConfigs {
         register("release") {
