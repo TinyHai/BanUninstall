@@ -100,10 +100,10 @@ class BannedAppViewModel : ViewModel() {
             withContext(Dispatchers.IO) {
                 val allPackages = client.packages.list
                 val appInfoList = allPackages.map {
-                    val label = it.applicationInfo.loadLabel(pm).toString()
-                    val icon = it.applicationInfo.loadIcon(pm)
-                    val packageName = it.packageName ?: it.applicationInfo.packageName
-                    val uid = it.applicationInfo.uid
+                    val label = it.applicationInfo!!.loadLabel(pm).toString()
+                    val icon = it.applicationInfo!!.loadIcon(pm)
+                    val packageName = it.packageName ?: it.applicationInfo!!.packageName
+                    val uid = it.applicationInfo!!.uid
                     AppInfo(label, icon, PkgInfo(packageName, uid / 100_000))
                 }
                 val bannedPkgInfos = client.allBannedPackages.map { PkgInfo(it) }

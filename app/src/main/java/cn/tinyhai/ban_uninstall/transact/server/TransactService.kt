@@ -66,11 +66,11 @@ object TransactService : ITransactor.Stub(), PkgInfoContainer {
             for (userId in userIds) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     pm.getInstalledPackages(0L, userId).list.filter {
-                        it.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0
+                        it.applicationInfo!!.flags and ApplicationInfo.FLAG_SYSTEM == 0
                     }
                 } else {
                     pm.getInstalledPackages(0, userId).list.filter {
-                        it.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0
+                        it.applicationInfo!!.flags and ApplicationInfo.FLAG_SYSTEM == 0
                     }
                 }.let {
                     list.addAll(it)
