@@ -11,14 +11,7 @@ class XposedInit : IXposedHookLoadPackage {
 
     companion object {
         val activeMode by lazy {
-            val cl = XposedInit::class.java.classLoader
-            try {
-                cl!!.loadClass("cn.tinyhai.xposed.meta_loader.LoaderEntry")
-                ActiveMode.Root
-            } catch (e: Exception) {
-                XPLogUtils.log(e)
-                ActiveMode.Xposed
-            }
+            ActiveMode.Xposed
         }
     }
 

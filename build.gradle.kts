@@ -11,7 +11,7 @@ plugins {
     alias(libs.plugins.kotlinParcelize) apply false
 }
 
-ext["allArch"] = arrayOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64", "universal")
+ext["allArch"] = emptyArray<String>()
 
 val allArch: Array<String> by ext
 
