@@ -38,7 +38,8 @@ class HookerInfoParser(
                 unhookable = unhookable,
                 hookType = methodHooker.hookType,
                 minSdk = methodHooker.minSdkInclusive,
-                maxSdk = methodHooker.maxSdkExclusive
+                maxSdk = methodHooker.maxSdkExclusive,
+                hookAll = methodHooker.hookAll
             )
         }.toList()
     }

@@ -11,5 +11,6 @@ data class HookerInfo(
     val unhookable: Boolean,
     val hookType: HookType,
     val minSdk: Int,
-    val maxSdk: Int
+    val maxSdk: Int,
+    val hookAll: Boolean
 )

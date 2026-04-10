@@ -259,7 +259,8 @@ class HookSystem(
     @MethodHooker(
         className = "com.android.server.pm.PackageManagerService",
         methodName = "deletePackageVersioned",
-        minSdkInclusive = Build.VERSION_CODES.O
+        minSdkInclusive = Build.VERSION_CODES.O,
+        hookAll = true
     )
     fun beforeDeletePackageVersioned(param: MethodHookParam) {
         handleDeletePackage(param)
