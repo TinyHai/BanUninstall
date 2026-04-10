@@ -348,9 +348,10 @@ class GenerateHookScope(
                                 scopeClassName,
                                 scopeSpec
                             )
+                            val memberName = if (info.hookAll) "hookAndAddAll" else "hookAndAddFirst"
                             addStatement(
                                 "unhooks.%N(%S, %N.%N, %S, callback)",
-                                hookHelper.member("hookAndAddFirst"),
+                                hookHelper.member(memberName),
                                 info.targetClassName,
                                 paramSpec,
                                 classLoader,

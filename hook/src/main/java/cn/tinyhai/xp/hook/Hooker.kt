@@ -79,7 +79,7 @@ interface HookerHelper {
         val hooker = if (methodName == "") {
             XposedBridge.hookAllConstructors(clazz, callback).also {
                 logger.verbose("hook ${clazz.canonicalName}#(all constructors) success")
-            } as Unhook?
+            }.firstOrNull()
         } else {
             clazz.declaredMethods.firstOrNull { it.name == methodName }?.let {
                 XposedBridge.hookMethod(it, callback).also {
@@ -103,6 +103,27 @@ interface HookerHelper {
         }.onFailure {
             logger.error(it)
         }.getOrNull()
+    }
+
+    fun MutableList<Unhook>.hookAndAddAll(
+        clazz: Class<*>,
+        methodName: String,
+        callback: XC_MethodHook
+    ) {
+        findAndHookAll(clazz, methodName, callback)?.also { addAll(it) }
+    }
+
+    fun MutableList<Unhook>.hookAndAddAll(
+        className: String,
+        classLoader: ClassLoader,
+        methodName: String,
+        callback: XC_MethodHook
+    ) {
+        runCatching {
+            findAndHookAll(classLoader.loadClass(className), methodName, callback)?.also { addAll(it) }
+        }.onFailure {
+            logger.error(it)
+        }
     }
 
     fun MutableList<Unhook>.hookAndAddFirst(

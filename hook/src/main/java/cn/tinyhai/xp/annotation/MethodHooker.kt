@@ -7,7 +7,8 @@ annotation class MethodHooker(
     val hookType: HookType = HookType.BeforeMethod,
     val className: String = "",
     val minSdkInclusive: Int = 0,
-    val maxSdkExclusive: Int = Int.MAX_VALUE
+    val maxSdkExclusive: Int = Int.MAX_VALUE,
+    val hookAll: Boolean = false
 )
 
 enum class HookType {
