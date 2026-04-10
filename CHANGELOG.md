@@ -1,3 +1,1 @@
-- 移除Root支持
-- 适配安卓16 #25 by @xsm1997
-- 更新版本号
+- fix: uninstall from launcher on ZUX OS 2.0/1.5 (mainly Lenovo tablets) #28
