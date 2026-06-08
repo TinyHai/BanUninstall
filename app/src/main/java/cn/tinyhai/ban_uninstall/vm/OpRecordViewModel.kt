@@ -10,6 +10,7 @@ import cn.tinyhai.ban_uninstall.auth.entities.OpResult
 import cn.tinyhai.ban_uninstall.auth.entities.OpType
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -38,12 +39,18 @@ data class OpRecordState(
     val showClearData: Boolean = true,
     val records: List<OpRecordInfo> = emptyList()
 ) {
+    val hasLoaded: Boolean get() = this !== Empty
+
     companion object {
         val Empty = OpRecordState()
     }
 }
 
 class OpRecordViewModel : ViewModel() {
+    companion object {
+        private const val TAG = "OpRecordViewModel"
+    }
+
     private val transactClient: TransactClient = TransactClient()
 
     private val authClient =
@@ -55,6 +62,7 @@ class OpRecordViewModel : ViewModel() {
 
     init {
         viewModelScope.launch {
+            loadOpRecordList()
             val hasPwd = authClient.hasPwd()
             updateState(_state) {
                 it.copy(hasPwd = hasPwd)
@@ -65,32 +73,40 @@ class OpRecordViewModel : ViewModel() {
     fun refresh() {
         viewModelScope.launch {
             updateState(_state) { it.copy(isRefreshing = true) }
-            val pm = App.app.packageManager
-            val records = withContext(Dispatchers.IO) {
-                authClient.allOpRecord.asReversed().map {
-                    val pkgInfo = it.pkgInfo
-                    val appInfo =
-                        transactClient.getApplicationInfoAsUser(pkgInfo.packageName, pkgInfo.userId)
-                    val opAppInfo = transactClient.getApplicationInfoAsUser(
-                        it.callingPackageName,
-                        it.callingUid / 100_000
-                    )
-                    OpRecordInfo(
-                        label = it.label,
-                        isDual = pkgInfo.userId / 100_000 > 0,
-                        packageName = appInfo?.packageName ?: pkgInfo.packageName,
-                        icon = appInfo?.loadIcon(pm),
-                        opType = it.opType,
-                        opResult = it.result,
-                        opUid = it.callingUid,
-                        opLabel = opAppInfo?.loadLabel(pm)?.toString(),
-                        opDate = Date(it.timeMillis)
-                    )
-                }
-            }
+            loadOpRecordList()
             updateState(_state) {
-                it.copy(records = records, isRefreshing = false)
+                it.copy(isRefreshing = false)
             }
+        }
+    }
+
+    private suspend fun loadOpRecordList() {
+        val pm = App.app.packageManager
+        val records = withContext(Dispatchers.IO) {
+            delay(100)
+            authClient.allOpRecord.asReversed().map {
+                val pkgInfo = it.pkgInfo
+                val appInfo =
+                    transactClient.getApplicationInfoAsUser(pkgInfo.packageName, pkgInfo.userId)
+                val opAppInfo = transactClient.getApplicationInfoAsUser(
+                    it.callingPackageName,
+                    it.callingUid / 100_000
+                )
+                OpRecordInfo(
+                    label = it.label,
+                    isDual = pkgInfo.userId / 100_000 > 0,
+                    packageName = appInfo?.packageName ?: pkgInfo.packageName,
+                    icon = appInfo?.loadIcon(pm),
+                    opType = it.opType,
+                    opResult = it.result,
+                    opUid = it.callingUid,
+                    opLabel = opAppInfo?.loadLabel(pm)?.toString(),
+                    opDate = Date(it.timeMillis)
+                )
+            }
+        }
+        updateState(_state) {
+            it.copy(records = records, isRefreshing = false)
         }
     }
 

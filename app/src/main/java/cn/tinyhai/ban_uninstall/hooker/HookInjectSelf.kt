@@ -38,7 +38,7 @@ class HookInjectSelf {
     }
 
     @MethodHooker(
-        className = "android.app.IApplicationThread\$Stub\$Proxy",
+        className = $$"android.app.IApplicationThread$Stub$Proxy",
         methodName = "scheduleLaunchActivity",
         hookType = HookType.BeforeMethod,
         minSdkInclusive = Build.VERSION_CODES.O,

@@ -2,7 +2,6 @@ package cn.tinyhai.ban_uninstall
 
 import android.content.pm.ApplicationInfo
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.util.Log
@@ -11,9 +10,13 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toDrawable
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient.Companion.isDummy
 import cn.tinyhai.ban_uninstall.auth.entities.AuthData
@@ -33,6 +37,11 @@ import cn.tinyhai.ban_uninstall.utils.BiometricUtils
 import cn.tinyhai.ban_uninstall.vm.AuthViewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 private const val TAG = "AuthActivity"
 
@@ -167,36 +176,23 @@ private fun ConfirmDialogContent(
         append("(${authData.opUid}) ")
         append(stringResource(id = R.string.text_try_op, opTypeText.lowercase()))
     }
-    Surface(
-        shape = RoundedCornerShape(28.dp),
-    ) {
-        Column(
-            modifier = Modifier
-                .widthIn(280.dp, 560.dp)
-                .padding(24.dp),
+    WindowDialog(true, title = opTypeText, onDismissRequest = { onCancel() }) {
+        Text(text = opContentText, style = MiuixTheme.textStyles.title4)
+        AppInfoContent(authData.appInfo)
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(top = 12.dp)
         ) {
-            Text(
-                text = opTypeText,
-                style = MaterialTheme.typography.headlineSmall
+            TextButton(text = stringResource(R.string.text_prevent), onClick = { onCancel() }, modifier = Modifier.weight(1f),)
+            Spacer(Modifier.width(20.dp))
+            TextButton(
+                text = stringResource(R.string.text_verify_and_allow),
+                onClick = {
+                    onConfirm()
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.textButtonColorsPrimary()
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = opContentText, style = MaterialTheme.typography.bodyLarge)
-            ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
-                AppInfoContent(authData.appInfo)
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = { onCancel() }) {
-                    Text(text = stringResource(R.string.text_prevent))
-                }
-                TextButton(
-                    onClick = {
-                        onConfirm()
-                    }
-                ) {
-                    Text(text = stringResource(R.string.text_verify_and_allow))
-                }
-            }
         }
     }
 }
@@ -204,7 +200,7 @@ private fun ConfirmDialogContent(
 @Composable
 private fun AppInfoContent(appInfo: ApplicationInfo) {
     val context = LocalContext.current
-    val icon by produceState<Drawable>(ColorDrawable(Color.TRANSPARENT)) {
+    val icon by produceState<Drawable>(Color.TRANSPARENT.toDrawable()) {
         appInfo.loadIcon(context.packageManager)?.let { value = it }
     }
     val label by produceState("") {

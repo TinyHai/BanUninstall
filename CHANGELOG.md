@@ -1,1 +1,3 @@
-- fix: uninstall from launcher on ZUX OS 2.0/1.5 (mainly Lenovo tablets) #28
+- 添加隐藏应用图标 #30
+- UI迁移至MIUIX #26
+- 升级依赖包版本

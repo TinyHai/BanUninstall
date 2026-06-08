@@ -1,127 +1,96 @@
 package cn.tinyhai.ban_uninstall.ui.screen
 
-import android.content.Intent
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Cancel
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Sms
-import androidx.compose.material3.*
+import androidx.compose.material.icons.rounded.CheckCircleOutline
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.R
-import cn.tinyhai.ban_uninstall.transact.entities.ActiveMode
-import cn.tinyhai.ban_uninstall.ui.component.TooltipBoxWrapper
-import cn.tinyhai.ban_uninstall.ui.component.rememberConfirmDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberSetPwdDialog
 import cn.tinyhai.ban_uninstall.ui.component.rememberVerifyPwdDialog
-import cn.tinyhai.ban_uninstall.utils.getLogcatFile
+import cn.tinyhai.ban_uninstall.ui.compositionlocal.LocalSectionEnable
+import cn.tinyhai.ban_uninstall.ui.navigation3.Navigator
+import cn.tinyhai.ban_uninstall.ui.navigation3.Route
 import cn.tinyhai.ban_uninstall.vm.MainState
 import cn.tinyhai.ban_uninstall.vm.MainViewModel
-import com.alorma.compose.settings.ui.SettingsGroup
-import com.alorma.compose.settings.ui.SettingsMenuLink
-import com.alorma.compose.settings.ui.SettingsSwitch
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.annotation.RootGraph
-import com.ramcosta.composedestinations.generated.destinations.BannedAppScreenDestination
-import com.ramcosta.composedestinations.generated.destinations.OpRecordScreenDestination
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Destination<RootGraph>(start = true)
 @Composable
-fun MainScreen(navigator: DestinationsNavigator) {
+fun MainScreen(navigator: Navigator) {
     val viewModel: MainViewModel = viewModel()
     val state by viewModel.state.collectAsState()
+    val scrollBehavior = MiuixScrollBehavior()
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = stringResource(id = R.string.app_title_main)) },
-                actions = {
-                    if (state.isActive) {
-                        val context = LocalContext.current
-                        val scope = rememberCoroutineScope()
-                        TooltipBoxWrapper(
-                            tooltipText = stringResource(R.string.icon_description_say_hello)
-                        ) {
-                            IconButton(onClick = { viewModel.sayHello() }) {
-                                Icon(
-                                    Icons.Outlined.Sms,
-                                    contentDescription = stringResource(R.string.icon_description_say_hello)
-                                )
-                            }
-                        }
-                        if (BuildConfig.ROOT_FEATURE) {
-                            TooltipBoxWrapper(tooltipText = stringResource(R.string.icon_description_bug_report)) {
-                                IconButton(
-                                    onClick = {
-                                        scope.launch {
-                                            val logcatFile = getLogcatFile()
-                                            val uri = FileProvider.getUriForFile(
-                                                context,
-                                                "${BuildConfig.APPLICATION_ID}.fileprovider",
-                                                logcatFile
-                                            )
-                                            val shareIntent = Intent(Intent.ACTION_SEND)
-                                            shareIntent.putExtra(Intent.EXTRA_STREAM, uri)
-                                            shareIntent.setDataAndType(uri, "text/*")
-                                            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-
-                                            context.startActivity(
-                                                Intent.createChooser(
-                                                    shareIntent,
-                                                    context.getString(R.string.icon_description_bug_report)
-                                                )
-                                            )
-                                        }
-                                    }
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.BugReport,
-                                        contentDescription = stringResource(R.string.icon_description_bug_report)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                title = stringResource(id = R.string.app_title_main),
+                scrollBehavior = scrollBehavior,
             )
-        }
+        },
     ) {
         MainScreenContent(
             state = state,
-            hasRoot = viewModel::hasRoot,
-            onActiveWithRoot = viewModel::onActiveWithRoot,
             onBanUninstall = viewModel::onBanUninstall,
             onBanClearData = viewModel::onBanClearData,
-            onAutoStart = viewModel::onAutoStart,
             onDevMode = viewModel::onDevMode,
             onUseBannedList = viewModel::onUseBannedList,
-            gotoBannedApp = { navigator.navigate(BannedAppScreenDestination()) },
-            gotoOpRecord = { navigator.navigate(OpRecordScreenDestination()) },
+            gotoBannedApp = { navigator.push(Route.BannedApp) },
+            gotoOpRecord = { navigator.push(Route.OpRecord) },
             onShowConfirm = viewModel::onShowConfirm,
             onVerifyPwd = viewModel::onVerifyPwd,
             onSetPwd = viewModel::onSetPwd,
             onClearPwd = viewModel::onClearPwd,
+            onTick = viewModel::onTick,
             modifier = Modifier
+                .fillMaxSize()
+                .scrollEndHaptic()
+                .overScrollVertical()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .verticalScroll(rememberScrollState())
                 .padding(it),
         )
@@ -131,11 +100,8 @@ fun MainScreen(navigator: DestinationsNavigator) {
 @Composable
 private fun MainScreenContent(
     state: MainState,
-    hasRoot: () -> Boolean,
-    onActiveWithRoot: () -> Unit,
     onBanUninstall: (Boolean) -> Unit,
     onBanClearData: (Boolean) -> Unit,
-    onAutoStart: (Boolean) -> Unit,
     onDevMode: (Boolean) -> Unit,
     onUseBannedList: (Boolean) -> Unit,
     gotoBannedApp: () -> Unit,
@@ -144,11 +110,15 @@ private fun MainScreenContent(
     onVerifyPwd: (String) -> Boolean,
     onSetPwd: (String) -> Unit,
     onClearPwd: () -> Unit,
+    onTick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier) {
-        StatusGroup(state, hasRoot, onActiveWithRoot)
-        FunctionGroup(state, onVerifyPwd, onBanUninstall, onBanClearData, onAutoStart, onDevMode)
+    Column(
+        modifier
+            .padding(horizontal = 16.dp)
+    ) {
+        StatusGroup(state, onTick)
+        FunctionGroup(state, onVerifyPwd, onBanUninstall, onBanClearData, onDevMode)
         AdvanceGroup(state, onVerifyPwd, onUseBannedList, gotoBannedApp, gotoOpRecord)
         SecurityGroup(state, onShowConfirm, onVerifyPwd, onSetPwd, onClearPwd)
     }
@@ -156,17 +126,21 @@ private fun MainScreenContent(
 
 @Composable
 private fun SettingsSection(
-    title: String,
-    enabled: Boolean = true,
-    content: @Composable ColumnScope.() -> Unit
+    title: String, enabled: Boolean = true, content: @Composable ColumnScope.() -> Unit
 ) {
-    SettingsGroup(
-        enabled = enabled,
-        title = { Text(text = title) },
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    CompositionLocalProvider(
+        LocalSectionEnable provides enabled
     ) {
-        ElevatedCard {
-            content()
+        Column {
+            Text(
+                text = title,
+                style = MiuixTheme.textStyles.title4,
+                color = MiuixTheme.colorScheme.onBackgroundVariant,
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp)
+            )
+            Card {
+                content()
+            }
         }
     }
 }
@@ -177,7 +151,6 @@ private fun FunctionGroup(
     onVerifyPwd: (String) -> Boolean,
     onBanUninstall: (Boolean) -> Unit,
     onBanClearData: (Boolean) -> Unit,
-    onAutoStart: (Boolean) -> Unit,
     onDevMode: (Boolean) -> Unit,
 ) {
     val verifyPwdDialogHandle = rememberVerifyPwdDialog(
@@ -190,87 +163,94 @@ private fun FunctionGroup(
         title = stringResource(R.string.group_title_function),
         enabled = state.isActive,
     ) {
-        SettingsSwitch(
-            state = state.banUninstall,
-            title = { Text(text = stringResource(R.string.switch_title_ban_uninstall)) },
-        ) {
-            scope.launch {
-                if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
-                    return@launch
+        SwitchPreference(
+            enabled = LocalSectionEnable.current,
+            checked = state.banUninstall,
+            title = stringResource(R.string.switch_title_ban_uninstall),
+            onCheckedChange = {
+                scope.launch {
+                    if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
+                        return@launch
+                    }
+                    onBanUninstall(it)
                 }
-                onBanUninstall(it)
             }
-        }
-        SettingsSwitch(
-            state = state.banClearData,
-            title = { Text(text = stringResource(R.string.switch_title_ban_clear_data)) },
-        ) {
-            scope.launch {
-                if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
-                    return@launch
+        )
+        SwitchPreference(
+            enabled = LocalSectionEnable.current,
+            checked = state.banClearData,
+            title = stringResource(R.string.switch_title_ban_clear_data),
+            onCheckedChange = {
+                scope.launch {
+                    if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
+                        return@launch
+                    }
+                    onBanClearData(it)
                 }
-                onBanClearData(it)
             }
-        }
-        if (state.activeMode == ActiveMode.Root) {
-            SettingsSwitch(
-                state = state.autoStart,
-                title = { Text(text = stringResource(R.string.switch_title_auto_start)) },
-                subtitle = { Text(text = stringResource(R.string.switch_subtitle_auto_start)) }
-            ) {
-                onAutoStart(it)
-            }
-        }
-        SettingsSwitch(
-            state = state.devMode,
-            title = { Text(text = stringResource(R.string.switch_title_dev_mode)) },
-        ) {
-            onDevMode(it)
-        }
+        )
+        SwitchPreference(
+            enabled = LocalSectionEnable.current,
+            checked = state.devMode,
+            title = stringResource(R.string.switch_title_dev_mode),
+            onCheckedChange = onDevMode
+        )
     }
 }
 
 @Composable
-private fun StatusGroup(state: MainState, hasRoot: () -> Boolean, onActiveWithRoot: () -> Unit) {
-    val activeWithRootDialog = rememberConfirmDialog(
-        title = stringResource(R.string.title_active_with_root),
-        content = stringResource(R.string.text_content_activate_with_root)
-    )
-    val scope = rememberCoroutineScope()
-    SettingsSection(
-        title = stringResource(R.string.group_title_module_status)
+private fun StatusGroup(state: MainState, onTick: () -> Unit) {
+    val moduleStatus =
+        stringResource(if (state.isActive) R.string.module_status_active else R.string.module_status_disable)
+    val context = LocalContext.current
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
     ) {
-        val moduleStatus =
-            stringResource(if (state.isActive) R.string.module_status_active else R.string.module_status_disable)
-        val context = LocalContext.current
-        SettingsMenuLink(
-            icon = {
-                Icon(
-                    if (state.isActive) Icons.Outlined.CheckCircle else Icons.Outlined.Cancel,
-                    contentDescription = moduleStatus
-                )
-            },
-            title = {
-                Text(text = moduleStatus)
-            },
-            subtitle = {
+        Card(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            onClick = {
                 if (state.isActive) {
-                    Text(
-                        text = stringResource(
-                            id = R.string.module_active_mode,
-                            state.activeMode.description
-                        ).format()
+                    Toast.makeText(context, moduleStatus, Toast.LENGTH_SHORT).show()
+                }
+                onTick()
+            },
+            colors = CardDefaults.defaultColors(
+                color = (if (state.isActive) Color.Green else Color.Red).copy(alpha = 0.2f)
+            ),
+            showIndication = true
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .offset(32.dp, 32.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    Icon(
+                        modifier = Modifier.size(170.dp),
+                        imageVector = if (state.isActive) Icons.Rounded.CheckCircleOutline else Icons.Rounded.ErrorOutline,
+                        tint = (if (state.isActive) Color.Green else Color.Red).copy(alpha = 0.4f),
+                        contentDescription = moduleStatus
                     )
                 }
-            }
-        ) {
-            if (state.isActive) {
-                Toast.makeText(context, moduleStatus, Toast.LENGTH_SHORT).show()
-                return@SettingsMenuLink
-            }
-            scope.launch {
-                if (hasRoot() && activeWithRootDialog.showConfirm()) {
-                    onActiveWithRoot()
+                Column(modifier = Modifier.padding(start = 32.dp, top = 32.dp)) {
+                    Text(
+                        stringResource(R.string.group_title_module_status),
+                        style = MiuixTheme.textStyles.title2
+                    )
+                    Text(moduleStatus)
+                    if (state.isActive) {
+                        Text(
+                            text = stringResource(
+                                id = R.string.module_active_mode, state.activeMode.description
+                            ).format()
+                        )
+                    }
                 }
             }
         }
@@ -292,37 +272,84 @@ private fun AdvanceGroup(
     )
     val scope = rememberCoroutineScope()
     SettingsSection(
-        enabled = state.isActive,
-        title = stringResource(R.string.group_title_advanced)
+        enabled = state.isActive, title = stringResource(R.string.group_title_advanced)
     ) {
-        SettingsSwitch(
-            state = state.useBannedList,
-            title = { Text(text = stringResource(R.string.switch_title_use_banned_list)) },
-        ) {
-            scope.launch {
-                if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
-                    return@launch
-                }
-                onUseBannedList(it)
-            }
+        val context = LocalContext.current
+        var isIconShow by remember {
+            mutableStateOf(true)
         }
+        val fakeActivity = remember {
+            ComponentName(
+                context, "${BuildConfig.APPLICATION_ID}.FakeActivity"
+            )
+        }
+
+        LaunchedEffect(Unit) {
+            isIconShow =
+                when (context.packageManager.getComponentEnabledSetting(
+                    fakeActivity
+                )) {
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> true
+                    else -> false
+                }
+        }
+
+        fun setIconShow(showIcon: Boolean) {
+            if (showIcon) {
+                context.packageManager.setComponentEnabledSetting(
+                    fakeActivity,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            } else {
+                context.packageManager.setComponentEnabledSetting(
+                    fakeActivity,
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            }
+            isIconShow = showIcon
+        }
+
+        SwitchPreference(
+            enabled = true,
+            checked = isIconShow,
+            title = stringResource(R.string.switch_title_show_app_icon),
+            onCheckedChange = {
+                setIconShow(!isIconShow)
+            },
+        )
+
+        SwitchPreference(
+            enabled = LocalSectionEnable.current,
+            checked = state.useBannedList,
+            title = stringResource(R.string.switch_title_use_banned_list),
+            onCheckedChange = {
+                scope.launch {
+                    if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
+                        return@launch
+                    }
+                    onUseBannedList(it)
+                }
+            }
+        )
         AnimatedVisibility(
             state.isActive && state.useBannedList,
         ) {
-            SettingsMenuLink(title = { Text(text = stringResource(R.string.menulink_title_banned_app)) }) {
+            ArrowPreference(title = stringResource(R.string.menulink_title_banned_app), onClick = {
                 scope.launch {
                     if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
                         return@launch
                     }
                     gotoBannedApp()
                 }
-            }
+            })
         }
-        SettingsMenuLink(
-            title = { Text(text = stringResource(R.string.menulink_view_operation_records)) },
-        ) {
-            gotoOpRecord()
-        }
+        ArrowPreference(
+            enabled = LocalSectionEnable.current,
+            title = stringResource(R.string.menulink_view_operation_records),
+            onClick = gotoOpRecord
+        )
     }
 }
 
@@ -344,49 +371,46 @@ private fun SecurityGroup(
     )
     val scope = rememberCoroutineScope()
     SettingsSection(
-        enabled = state.isActive,
-        title = stringResource(R.string.group_title_security)
+        enabled = state.isActive, title = stringResource(R.string.group_title_security)
     ) {
-        SettingsSwitch(
-            state = state.hasPwd,
-            title = { Text(text = stringResource(R.string.switch_title_use_separate_password)) },
-            subtitle = {
-                Text(text = stringResource(R.string.switch_subtitle_use_separate_password))
-            }
-        ) { enable ->
-            scope.launch {
-                when {
-                    enable -> {
-                        onSetPwd(setPwdDialogHandle.awaitInput())
-                    }
+        SwitchPreference(
+            enabled = LocalSectionEnable.current,
+            checked = state.hasPwd,
+            title = stringResource(R.string.switch_title_use_separate_password),
+            summary = stringResource(R.string.switch_subtitle_use_separate_password),
+            onCheckedChange = { enable ->
+                scope.launch {
+                    when {
+                        enable -> {
+                            onSetPwd(setPwdDialogHandle.awaitInput())
+                        }
 
-                    !enable && state.hasPwd -> {
-                        if (verifyPwdDialogHandle.verify()) {
-                            onClearPwd()
+                        !enable && state.hasPwd -> {
+                            if (verifyPwdDialogHandle.verify()) {
+                                onClearPwd()
+                            }
                         }
                     }
                 }
             }
-        }
+        )
         AnimatedVisibility(
             state.isActive && state.hasPwd,
         ) {
-            SettingsMenuLink(title = { Text(text = stringResource(R.string.menulink_change_password)) }) {
+            ArrowPreference(title = stringResource(R.string.menulink_change_password), onClick = {
                 scope.launch {
                     if (verifyPwdDialogHandle.verify()) {
                         onSetPwd(setPwdDialogHandle.awaitInput())
                     }
                 }
-            }
+            })
         }
-        SettingsSwitch(
-            state = state.showConfirm,
-            title = { Text(text = stringResource(R.string.switch_title_show_confirm)) },
-            subtitle = {
-                Text(text = stringResource(R.string.switch_subtitle_show_confirm))
-            }
-        ) {
-            onShowConfirm(it)
-        }
+        SwitchPreference(
+            enabled = LocalSectionEnable.current,
+            checked = state.showConfirm,
+            title = stringResource(R.string.switch_title_show_confirm),
+            summary = stringResource(R.string.switch_subtitle_show_confirm),
+            onCheckedChange = onShowConfirm
+        )
     }
 }

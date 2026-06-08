@@ -1,21 +1,30 @@
 package cn.tinyhai.ban_uninstall.ui.component
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.substring
+import androidx.compose.ui.unit.dp
 import cn.tinyhai.ban_uninstall.R
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextButton
+import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.window.WindowDialog
 
 interface DialogHandle {
     fun show()
@@ -90,25 +99,31 @@ fun rememberConfirmDialog(
 
 @Composable
 fun ConfirmDialog(title: String, content: String, onConfirm: () -> Unit, onCancel: () -> Unit) {
-    AlertDialog(
+    WindowDialog(
         onDismissRequest = { },
-        dismissButton = {
-            TextButton(onClick = onCancel) {
-                Text(text = stringResource(id = android.R.string.cancel))
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(text = stringResource(id = android.R.string.ok))
-            }
-        },
-        title = {
-            Text(text = title)
-        },
-        text = {
+        show = true,
+        title = title
+    ) {
+        Column {
             Text(text = content)
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.padding(top = 12.dp)
+            ) {
+                TextButton(
+                    text = stringResource(id = android.R.string.cancel),
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(
+                    text = stringResource(id = android.R.string.ok),
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.textButtonColorsPrimary()
+                )
+            }
         }
-    )
+    }
 }
 
 @Composable
@@ -189,50 +204,49 @@ fun VerifyPwdDialog(
         }
     }
 
-    AlertDialog(
+    WindowDialog(
+        show = true,
+        title = title,
         onDismissRequest = { },
-        dismissButton = {
-            TextButton(onClick = { onCancel() }) {
-                Text(text = stringResource(id = android.R.string.cancel))
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
+    ) {
+        TextField(
+            value = text.value,
+            onValueChange = { text.value = it },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.NumberPassword,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions {
                 scope.launch {
                     verifyPassword(text.value)
                 }
-            }) {
-                Text(text = stringResource(id = android.R.string.ok))
+            },
+            labelColor = if (hasError.value) Color.Red else MiuixTheme.colorScheme.onSecondaryContainer,
+            label = if (hasError.value) {
+                errorText
+            } else {
+                ""
             }
-        },
-        title = {
-            Text(text = title)
-        },
-        text = {
-            OutlinedTextField(
-                value = text.value,
-                onValueChange = { text.value = it },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    keyboardType = KeyboardType.NumberPassword,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions {
-                    scope.launch {
-                        verifyPassword(text.value)
-                    }
-                },
-                isError = hasError.value,
-                supportingText = if (hasError.value) {
-                    {
-                        Text(text = errorText)
-                    }
-                } else {
-                    null
-                }
+        )
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            TextButton(
+                text = stringResource(id = android.R.string.cancel),
+                onClick = onCancel,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(20.dp))
+            TextButton(
+                text = stringResource(id = android.R.string.ok),
+                onClick = { scope.launch { verifyPassword(text.value) } },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.textButtonColorsPrimary()
             )
         }
-    )
+    }
 }
 
 @Composable
@@ -300,45 +314,49 @@ fun SetPwdDialog(
         mutableIntStateOf(text.value.length)
     }
 
-    AlertDialog(
+    WindowDialog(
+        show = true,
         onDismissRequest = { },
-        dismissButton = {
-            TextButton(onClick = { onCancel() }) {
-                Text(text = stringResource(id = android.R.string.cancel))
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { if (curCount >= 4) onConfirm(text.value) }) {
-                Text(text = stringResource(id = android.R.string.ok))
-            }
-        },
-        title = {
-            Text(text = title)
-        },
-        text = {
-            OutlinedTextField(
-                value = text.value,
-                onValueChange = {
-                    text.value = it.trim().take(16)
-                    curCount = text.value.length
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    keyboardType = KeyboardType.NumberPassword,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions {
-                    if (curCount >= 4) {
-                        onConfirm(text.value)
-                    }
-                },
-                placeholder = {
-                    Text(text = stringResource(id = R.string.text_password_placeholder))
-                },
-                trailingIcon = {
-                    Text(text = "$curCount/$maxCount")
+        title = title
+    ) {
+        TextField(
+            value = text.value,
+            onValueChange = {
+                text.value = it.trim().take(16)
+                curCount = text.value.length
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.NumberPassword,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions {
+                if (curCount >= 4) {
+                    onConfirm(text.value)
                 }
+            },
+            label = stringResource(id = R.string.text_password_placeholder),
+            useLabelAsPlaceholder = true,
+            trailingIcon = {
+                Text(text = "$curCount/$maxCount", modifier = Modifier.padding(end = 8.dp))
+            },
+        )
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            TextButton(
+                text = stringResource(id = android.R.string.cancel),
+                onClick = { onCancel() },
+                modifier = Modifier.weight(1f),
             )
-        },
-    )
+            Spacer(Modifier.width(20.dp))
+            TextButton(
+                text = stringResource(id = android.R.string.ok),
+                onClick = { if (curCount >= 4) onConfirm(text.value) },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.textButtonColorsPrimary()
+            )
+        }
+    }
 }

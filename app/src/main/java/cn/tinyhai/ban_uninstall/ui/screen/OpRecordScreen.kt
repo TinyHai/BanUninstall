@@ -1,56 +1,96 @@
 package cn.tinyhai.ban_uninstall.ui.screen
 
+import android.util.Log
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.collection.intListOf
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cn.tinyhai.ban_uninstall.R
 import cn.tinyhai.ban_uninstall.auth.entities.OpResult
 import cn.tinyhai.ban_uninstall.auth.entities.OpType
-import cn.tinyhai.ban_uninstall.ui.component.TooltipBoxWrapper
 import cn.tinyhai.ban_uninstall.ui.component.rememberVerifyPwdDialog
 import cn.tinyhai.ban_uninstall.ui.compositionlocal.DateFormats
 import cn.tinyhai.ban_uninstall.ui.compositionlocal.LocalDateFormats
+import cn.tinyhai.ban_uninstall.ui.navigation3.Navigator
 import cn.tinyhai.ban_uninstall.vm.OpRecordInfo
 import cn.tinyhai.ban_uninstall.vm.OpRecordViewModel
 import coil.compose.AsyncImage
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.annotation.RootGraph
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.android.awaitFrame
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Checkbox
+import top.yukonga.miuix.kmp.basic.DropdownImpl
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.ListPopupColumn
+import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+import top.yukonga.miuix.kmp.basic.PullToRefresh
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.ScrollBehavior
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.basic.rememberPullToRefreshState
+import top.yukonga.miuix.kmp.overlay.OverlayListPopup
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.text.DateFormat
 import java.util.Date
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Destination<RootGraph>
+private const val TAG = "OpRecordScreen"
+
 @Composable
-fun OpRecordScreen(navigator: DestinationsNavigator) {
+fun OpRecordScreen(navigator: Navigator) {
     val viewModel: OpRecordViewModel = viewModel()
-    val state by viewModel.state.collectAsState()
-
-    LaunchedEffect(Unit) {
-        viewModel.refresh()
-    }
-
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val scrollBehavior = MiuixScrollBehavior()
     Scaffold(
         topBar = {
             val scope = rememberCoroutineScope()
@@ -61,77 +101,83 @@ fun OpRecordScreen(navigator: DestinationsNavigator) {
             )
             TopAppBar(
                 navigationIcon = {
-                    IconButton(onClick = { navigator.navigateUp() }) {
+                    IconButton(onClick = { navigator.pop() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "navigationUp"
                         )
                     }
                 },
-                title = { Text(text = stringResource(R.string.app_title_operation_record)) },
+                title = stringResource(R.string.app_title_operation_record),
+                scrollBehavior = scrollBehavior,
                 actions = {
-                    TooltipBoxWrapper(tooltipText = stringResource(R.string.icon_description_clear_all_records)) {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
-                                        return@launch
-                                    }
-                                    viewModel.clearAllRecords()
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                if (state.hasPwd && !verifyPwdDialogHandle.verify()) {
+                                    return@launch
                                 }
+                                viewModel.clearAllRecords()
                             }
-                        ) {
-                            Icon(
-                                Icons.Default.ClearAll,
-                                contentDescription = stringResource(R.string.icon_description_clear_all_records)
-                            )
                         }
+                    ) {
+                        Icon(
+                            Icons.Default.ClearAll,
+                            contentDescription = stringResource(R.string.icon_description_clear_all_records)
+                        )
                     }
-                    TooltipBoxWrapper(tooltipText = stringResource(R.string.icon_description_filter_list)) {
-                        var showMenu by rememberSaveable {
-                            mutableStateOf(false)
-                        }
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                Icons.Default.FilterList,
-                                contentDescription = stringResource(R.string.icon_description_filter_list)
-                            )
-                        }
+                    var showMenu by rememberSaveable {
+                        mutableStateOf(false)
+                    }
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(
+                            Icons.Default.FilterList,
+                            contentDescription = stringResource(R.string.icon_description_filter_list)
+                        )
+                    }
 
-                        @Composable
-                        fun menuItem(text: String, show: Boolean, onChange: (Boolean) -> Unit) {
-                            DropdownMenuItem(
-                                text = { Text(text) },
-                                onClick = { onChange(show.not()) },
-                                leadingIcon = {
-                                    Checkbox(
-                                        checked = show,
-                                        onCheckedChange = onChange,
-                                    )
-                                }
-                            )
-                        }
-
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    @Composable
+                    fun menuItem(
+                        text: String,
+                        show: Boolean,
+                        onChange: (Boolean) -> Unit,
+                        index: Int
+                    ) {
+                        DropdownImpl(
+                            text = text,
+                            optionSize = 4,
+                            isSelected = show,
+                            index = index,
+                            onSelectedIndexChange = {
+                                onChange(show.not())
+                            }
+                        )
+                    }
+                    OverlayListPopup(show = showMenu, onDismissRequest = { showMenu = false }) {
+                        ListPopupColumn {
                             menuItem(
                                 text = stringResource(id = R.string.text_allowed),
                                 show = state.showAllowed,
-                                onChange = viewModel::showAllowed
+                                onChange = viewModel::showAllowed,
+                                index = 0
                             )
                             menuItem(
                                 text = stringResource(id = R.string.text_prevented),
                                 show = state.showPrevented,
-                                onChange = viewModel::showPrevented
+                                onChange = viewModel::showPrevented,
+                                index = 1
                             )
                             menuItem(
                                 text = stringResource(id = R.string.text_uninstall_app),
                                 show = state.showUninstall,
-                                onChange = viewModel::showUninstall
+                                onChange = viewModel::showUninstall,
+                                index = 2
                             )
                             menuItem(
                                 text = stringResource(id = R.string.text_clear_app_data),
                                 show = state.showClearData,
-                                onChange = viewModel::showClearData
+                                onChange = viewModel::showClearData,
+                                index = 2
                             )
                         }
                     }
@@ -160,33 +206,58 @@ fun OpRecordScreen(navigator: DestinationsNavigator) {
         }.toList()
 
         CompositionLocalProvider(LocalDateFormats provides dateFormats) {
-            OpRecordList(
-                isRefreshing = state.isRefreshing,
-                onRefreshing = viewModel::refresh,
-                records = filteredRecords,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(it)
-            )
+            if (state.records.isEmpty() && !state.hasLoaded) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(it),
+                    contentAlignment = Alignment.Center
+                ) {
+                    InfiniteProgressIndicator()
+                }
+            } else {
+                OpRecordList(
+                    isRefreshing = state.isRefreshing,
+                    onRefreshing = viewModel::refresh,
+                    records = filteredRecords,
+                    scrollBehavior = scrollBehavior,
+                    contentPadding = it,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .scrollEndHaptic()
+                        .overScrollVertical()
+                        .nestedScroll(scrollBehavior.nestedScrollConnection)
+                        .padding(it)
+                )
+            }
         }
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun OpRecordList(
     isRefreshing: Boolean,
     onRefreshing: () -> Unit,
+    scrollBehavior: ScrollBehavior,
+    contentPadding: PaddingValues,
     records: List<OpRecordInfo>,
     modifier: Modifier = Modifier
 ) {
-    val refreshState = rememberPullRefreshState(refreshing = isRefreshing, onRefresh = onRefreshing)
     val groupedRecords = records.groupBy {
         val date = it.opDate
         Date(date.year, date.month, date.date)
     }
-    Box(modifier = modifier.pullRefresh(refreshState)) {
-        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp)) {
+    PullToRefresh(
+        isRefreshing,
+        onRefresh = onRefreshing,
+        topAppBarScrollBehavior = scrollBehavior,
+        contentPadding = contentPadding
+    ) {
+        LazyColumn(
+            modifier = modifier,
+            contentPadding = PaddingValues(16.dp, 8.dp)
+        ) {
             if (groupedRecords.isEmpty()) {
                 item {
                     Box(
@@ -207,7 +278,7 @@ private fun OpRecordList(
                             Box(contentAlignment = Alignment.CenterStart) {
                                 Text(
                                     text = LocalDateFormats.current.dateFormat.format(date),
-                                    style = MaterialTheme.typography.titleLarge
+                                    style = MiuixTheme.textStyles.title2
                                 )
                             }
                         }
@@ -215,18 +286,13 @@ private fun OpRecordList(
                     items(records, key = { it.hashCode() }) {
                         OpRecordItem(
                             record = it, modifier = Modifier
-                                .padding(vertical = 8.dp)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
                                 .fillParentMaxWidth()
                         )
                     }
                 }
             }
         }
-        PullRefreshIndicator(
-            refreshing = isRefreshing,
-            state = refreshState,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
     }
 }
 
@@ -275,7 +341,7 @@ private fun OpRecordItem(record: OpRecordInfo, modifier: Modifier = Modifier) {
         OpResult.Allowed -> stringResource(R.string.text_allowed)
         OpResult.Unhandled -> stringResource(R.string.text_unhandled)
     }
-    ElevatedCard(modifier = modifier) {
+    Card(modifier = modifier) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text(text = opContentText)
             Row(modifier = Modifier.padding(vertical = 8.dp)) {

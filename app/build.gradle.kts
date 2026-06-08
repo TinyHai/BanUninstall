@@ -1,28 +1,28 @@
+@file:OptIn(KspExperimental::class)
+
+import com.android.build.api.variant.impl.VariantOutputImpl
+import com.google.devtools.ksp.KspExperimental
 import org.gradle.kotlin.dsl.support.uppercaseFirstChar
-import java.io.ByteArrayOutputStream
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlinParcelize)
     alias(libs.plugins.composeCompiler)
 }
 
-fun String.execute(): String {
-    val byteOut = ByteArrayOutputStream()
-    project.exec {
-        commandLine = this@execute.split("\\s".toRegex())
-        standardOutput = byteOut
-    }
-    return String(byteOut.toByteArray()).trim()
-}
-
-val allArch: Array<String> by rootProject.ext
+fun String.execute(): String =
+    ProcessBuilder(this.split("\\s".toRegex()))
+        .start()
+        .inputStream
+        .bufferedReader()
+        .use { it.readText() }
+        .trim()
 
 android {
     namespace = "cn.tinyhai.ban_uninstall"
-    compileSdk = 36
+    compileSdk = 37
 
     signingConfigs {
         register("release") {
@@ -35,10 +35,10 @@ android {
 
     defaultConfig {
         applicationId = "cn.tinyhai.ban_uninstall"
-        minSdk = 21
-        targetSdk = 34
-        versionCode = 11
-        versionName = "1.4.3"
+        minSdk = 23
+        targetSdk = 37
+        versionCode = 12
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -49,37 +49,13 @@ android {
         }
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
             versionNameSuffix = "-${"git rev-parse --verify --short HEAD".execute()}"
-        }
-
-        allArch.forEach { arch ->
-            register(arch) {
-                initWith(getByName("release"))
-                versionNameSuffix = "${versionNameSuffix}_$arch"
-                ndk {
-                    abiFilters.clear()
-                    abiFilters += if (arch == "universal") arrayOf(
-                        "arm64-v8a",
-                        "armeabi-v7a",
-                        "x86",
-                        "x86_64"
-                    ) else arrayOf(arch)
-                }
-            }
-        }
-
-        all {
-            matchingFallbacks += "release"
-            val fieldValue = when (this.name) {
-                "debug", in allArch -> "true"
-                else -> "false"
-            }
-            buildConfigField("boolean", "ROOT_FEATURE", fieldValue)
         }
     }
 
@@ -99,115 +75,76 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    ksp.useKsp2 = true
+    enableKotlin = true
+}
 
-    kotlinOptions {
-        jvmTarget = "17"
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
-afterEvaluate {
-    android.applicationVariants.all {
-        val buildType = buildType.name
-        val flavor = flavorName
-        val versionCode = versionCode
-        val versionName = this.versionName
-
-        val apkName = buildString {
-            append("app")
-            if (flavor.isNotBlank()) {
-                append("-$flavor")
-            }
-            append("-$buildType")
-            append(".apk")
+androidComponents {
+    onVariants {
+        val buildType = it.buildType ?: ""
+        val flavor = it.flavorName ?: ""
+//        val versionCode = versionCode
+//        val versionName = this.versionName
+        for (output in it.outputs) {
+            val apkName = "${rootProject.name}_${output.versionName.get()}.apk"
+            (output as VariantOutputImpl).outputFileName = apkName
         }
-        val newApkName = "${rootProject.name}_$versionName.apk"
         val apkPath = buildString {
             append(layout.buildDirectory.asFile.get().path)
             append("/outputs/apk/")
-            if (flavor.isNotBlank()) {
-                append("$flavor/")
-            }
             append(buildType)
         }
-        val apkFile = File(apkPath, apkName)
-
-        val renameTask =
-            tasks.register("rename${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}Output") {
-                doLast {
-                    apkFile.renameTo(File(apkPath, newApkName))
-                }
-            }
-
-        val assembleTask =
-            tasks.findByName("assemble${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}")
-        assembleTask?.finalizedBy(renameTask)
-
-        when (buildType) {
-            "release" -> {
-                assembleTask?.doLast {
-                    val versionCodeFile = File(apkPath, "versionCode")
-                        .apply { if (!exists()) createNewFile() }
-                    versionCodeFile.bufferedWriter().use {
-                        it.append(versionCode.toString())
-                        it.flush()
-                    }
-                    val versionNameFile = File(apkPath, "versionName")
-                        .apply { if (!exists()) createNewFile() }
-                    versionNameFile.bufferedWriter().use {
-                        it.append(versionName)
-                        it.flush()
-                    }
-                }
-
-                tasks.findByName("strip${buildType.uppercaseFirstChar()}DebugSymbols")?.doLast {
-                    file(this.outputs.files.asPath).let { if (it.exists()) it.deleteRecursively() }
-                }
-
-                tasks.findByName("merge${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}Assets")
-                    ?.doLast {
-                        val lspatchDir = file(this.outputs.files.asPath).resolve("lspatch")
-                        if (lspatchDir.exists()) {
-                            lspatchDir.deleteRecursively()
+        afterEvaluate {
+            tasks.named("assemble${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}") {
+                it.outputs.forEach { output ->
+                    doLast {
+                        val versionCodeFile = File(apkPath, "versionCode")
+                            .apply { if (!exists()) createNewFile() }
+                        versionCodeFile.bufferedWriter().use {
+                            it.append(output.versionCode.get().toString())
+                            it.flush()
+                        }
+                        val versionNameFile = File(apkPath, "versionName")
+                            .apply { if (!exists()) createNewFile() }
+                        versionNameFile.bufferedWriter().use {
+                            it.append(output.versionName.get())
+                            it.flush()
                         }
                     }
+                }
             }
-
-            in allArch -> {
-                tasks.findByName("merge${flavor.uppercaseFirstChar()}${buildType.uppercaseFirstChar()}Assets")
-                    ?.doLast {
-                        val soDir = file(this.outputs.files.asPath).resolve("lspatch").resolve("so")
-                        soDir.listFiles()?.filter { it.isDirectory }?.forEach {
-                            if (it.name != buildType) {
-                                it.deleteRecursively()
-                            }
-                        }
-                    }
-            }
-
-            "universal", "debug" -> {}
         }
     }
 }
 
 dependencies {
+    implementation(libs.androidx.core.ktx)
     compileOnly(libs.xposed.api)
     compileOnly(project(":hiddenApi"))
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.appcompat)
     implementation(libs.androidx.biometric)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.composeSettings.ui)
-    implementation(libs.composeSettings.ui.extended)
     implementation(libs.dev.rikka.rikkax.parcelablelist)
     implementation(libs.coil.compose)
-    implementation(libs.compose.destinations.core)
-    implementation(libs.compose.destinations.bottomsheet)
-    implementation(libs.libsu.core)
-    implementation("com.github.TinyHai:ComposeDragDrop:dev-SNAPSHOT")
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.miuix.ui)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.miuix.navigation3.ui)
+    implementation(libs.miuix.icons)
+    implementation(libs.miuix.preference)
+    implementation(libs.androidx.navigationevent.compose)
     implementation(project(":hook"))
     ksp(project(":processor"))
     ksp(libs.compose.destinations.ksp)
