@@ -34,23 +34,33 @@
             android:name="xposedsharedprefs"
             android:value="true" />
 
+        <activity-alias
+            android:name=".FakeActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
             </intent-filter>
         </activity>
 
         <activity
             android:name=".AuthActivity"
-            android:exported="false"
-            android:taskAffinity=""
             android:excludeFromRecents="true"
+            android:exported="false"
             android:noHistory="true"
-            android:windowSoftInputMode="stateAlwaysHidden"
-            android:theme="@style/Theme.AppCompat.DayNight.Dialog" />
+            android:taskAffinity=""
+            android:theme="@style/Theme.AppCompat.DayNight.Dialog"
+            android:windowSoftInputMode="stateAlwaysHidden" />
 
         <receiver
             android:name=".receiver.BootCompletedReceiver"

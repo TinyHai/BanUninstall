@@ -1,23 +1,14 @@
 package cn.tinyhai.ban_uninstall.vm
 
-import android.content.ComponentName
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.content.pm.PackageManager
 import android.os.SystemClock
-import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cn.tinyhai.ban_uninstall.App
-import cn.tinyhai.ban_uninstall.BuildConfig
 import cn.tinyhai.ban_uninstall.auth.IAuth
 import cn.tinyhai.ban_uninstall.auth.client.AuthClient
-import cn.tinyhai.ban_uninstall.receiver.BootCompletedReceiver
-import cn.tinyhai.ban_uninstall.receiver.RestartMainReceiver
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
 import cn.tinyhai.ban_uninstall.transact.entities.ActiveMode
 import cn.tinyhai.ban_uninstall.utils.SharedPrefs
-import cn.tinyhai.ban_uninstall.utils.hasRoot
-import cn.tinyhai.ban_uninstall.utils.tryToInjectIntoSystemServer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +25,6 @@ data class MainState(
     val useBannedList: Boolean = false,
     val showConfirm: Boolean = false,
     val hasPwd: Boolean = false,
-    val autoStart: Boolean = false,
 ) {
     val isActive get() = activeMode != ActiveMode.Disabled
 
@@ -107,18 +97,12 @@ class MainViewModel : ViewModel() {
 
     private val prefsListener: OnSharedPreferenceChangeListener
 
-    private val unregisterRestartMainReceiver: (() -> Unit)?
-
     init {
         var activeMode = ActiveMode.entries[client.activeMode]
-        if (BuildConfig.ROOT_FEATURE && activeMode == ActiveMode.Disabled) {
-            unregisterRestartMainReceiver = RestartMainReceiver.register(App.app)
-        } else {
-            unregisterRestartMainReceiver = null
-        }
 
         prefsListener = OnSharedPreferenceChangeListener { sp, _ ->
             if (sp == SharedPrefs.prefs) {
+                @Suppress("UNCHECKED_CAST")
                 client.syncPrefs(sp.all as Map<Any?, Any?>)
             }
         }
@@ -127,8 +111,6 @@ class MainViewModel : ViewModel() {
         if (activeMode == ActiveMode.Xposed && !SharedPrefs.isWorldReadable) {
             activeMode = ActiveMode.Disabled
         }
-
-        val autoStart = isBootCompletedReceiverEnabled()
 
         viewModelScope.launch {
             val hasPwd = authClient.hasPwd()
@@ -142,7 +124,6 @@ class MainViewModel : ViewModel() {
                         useBannedList = isUseBannedList,
                         showConfirm = isShowConfirm,
                         hasPwd = hasPwd,
-                        autoStart = autoStart
                     )
                 }
             }
@@ -152,20 +133,6 @@ class MainViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         SharedPrefs.prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
-        unregisterRestartMainReceiver?.invoke()
-    }
-
-    fun hasRoot(): Boolean {
-        return BuildConfig.ROOT_FEATURE && hasRoot
-    }
-
-    fun onActiveWithRoot() {
-        if (!hasRoot || state.value.activeMode != ActiveMode.Disabled) {
-            return
-        }
-        viewModelScope.launch {
-            tryToInjectIntoSystemServer()
-        }
     }
 
     fun onBanUninstall(enabled: Boolean) {
@@ -223,17 +190,6 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun onAutoStart(enabled: Boolean) {
-        if (hasRoot().not() || isActive.not() || state.value.activeMode != ActiveMode.Root) {
-            return
-        }
-        val state = state.value
-        onValueChanged(state.autoStart, enabled) {
-            setBootCompletedReceiverEnabled(enabled)
-            it.copy(autoStart = enabled)
-        }
-    }
-
     fun onVerifyPwd(pwd: String): Boolean {
         return authClient.authenticate(pwd)
     }
@@ -258,17 +214,11 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun sayHello() {
+    fun onTick() {
         if (isActive.not()) {
             return
         }
         clearPwdTicker.increaseTick()
-
-        viewModelScope.launch {
-            client.sayHello("test").let {
-                Toast.makeText(App.app, it, Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private inline fun onValueChanged(
@@ -279,23 +229,5 @@ class MainViewModel : ViewModel() {
         if (oldValue != newValue) {
             updateState(_state, updater)
         }
-    }
-
-    private fun isBootCompletedReceiverEnabled(): Boolean {
-        val context = App.app
-        val pm = context.packageManager
-        val receiver = ComponentName(context, BootCompletedReceiver::class.java)
-        return pm.getComponentEnabledSetting(receiver) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-    }
-
-    private fun setBootCompletedReceiverEnabled(enabled: Boolean) {
-        val context = App.app
-        val pm = context.packageManager
-        val receiver = ComponentName(context, BootCompletedReceiver::class.java)
-        pm.setComponentEnabledSetting(
-            receiver,
-            if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-            PackageManager.DONT_KILL_APP
-        )
     }
 }

@@ -6,11 +6,15 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
 import cn.tinyhai.ban_uninstall.transact.client.TransactClient
+import cn.tinyhai.ban_uninstall.ui.navigation3.Route
+import cn.tinyhai.ban_uninstall.ui.navigation3.rememberNavigator
+import cn.tinyhai.ban_uninstall.ui.screen.BannedAppScreen
+import cn.tinyhai.ban_uninstall.ui.screen.MainScreen
+import cn.tinyhai.ban_uninstall.ui.screen.OpRecordScreen
 import cn.tinyhai.ban_uninstall.ui.theme.AppTheme
-import com.ramcosta.composedestinations.DestinationsNavHost
-import com.ramcosta.composedestinations.animations.defaults.DefaultFadingTransitions
-import com.ramcosta.composedestinations.generated.NavGraphs
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,7 +24,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AppTheme {
-                DestinationsNavHost(NavGraphs.root, defaultTransitions = DefaultFadingTransitions)
+//                DestinationsNavHost(NavGraphs.root, defaultTransitions = DefaultFadingTransitions)
+                val navigator = rememberNavigator(Route.Main)
+                NavDisplay(navigator.backStack, entryProvider = entryProvider {
+                    entry<Route.Main> {
+                        MainScreen(navigator)
+                    }
+                    entry<Route.BannedApp> {
+                        BannedAppScreen(navigator)
+                    }
+                    entry<Route.OpRecord> {
+                        OpRecordScreen(navigator)
+                    }
+                })
             }
         }
     }

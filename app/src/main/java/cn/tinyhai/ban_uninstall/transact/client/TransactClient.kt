@@ -97,7 +97,8 @@ class TransactClient(
         }
 
         private fun ComponentName.isSelf(): Boolean {
-            return packageName == BuildConfig.APPLICATION_ID && className == MainActivity::class.qualifiedName
+            return packageName == BuildConfig.APPLICATION_ID
+                    && className in arrayOf(MainActivity::class.qualifiedName, "${BuildConfig.APPLICATION_ID}.FakeActivity")
         }
 
         fun injectBinderIfNeeded(service: ITransactor.Stub, intent: Intent, userId: Int) {

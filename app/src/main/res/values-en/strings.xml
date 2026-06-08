@@ -17,6 +17,7 @@
     <string name="icon_description_sync">Sync configs to system</string>
     <string name="icon_description_say_hello">test msg</string>
     <string name="menulink_title_banned_app">Config banned apps</string>
+    <string name="icon_description_dropmenu">drop list</string>
     <string name="text_app_label_dual">(Dual)%1$s</string>
     <string name="text_empty_list">Nothing here…</string>
     <string name="text_drag_target_add_default">Drag to here to add it into banned list</string>
@@ -63,4 +64,9 @@
     <string name="text_unhandled">Unhandled</string>
     <string name="icon_description_clear_all_records">Clear All Records</string>
     <string name="icon_description_filter_list">Filter List</string>
+    <string name="small_title_freed_app">%1$d apps freed</string>
+    <string name="small_title_banned_app">%1$d apps banned</string>
+    <string name="title_app_manage">Apps</string>
+    <string name="hint_search_app">Search App</string>
+    <string name="switch_title_show_app_icon">Show App Icon</string>
 </resources>
