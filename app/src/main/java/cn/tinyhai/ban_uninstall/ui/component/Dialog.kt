@@ -23,6 +23,7 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.window.WindowDialog
 
@@ -77,20 +78,15 @@ fun rememberConfirmDialog(
     }
     val dialogComposable = @Composable {
         if (showDialog.value) {
-            ConfirmDialog(
-                title,
-                content,
-                onCancel = {
-                    scope.launch {
-                        result.send(false)
-                    }
-                },
-                onConfirm = {
-                    scope.launch {
-                        result.send(true)
-                    }
+            ConfirmDialog(title, content, onCancel = {
+                scope.launch {
+                    result.send(false)
                 }
-            )
+            }, onConfirm = {
+                scope.launch {
+                    result.send(true)
+                }
+            })
         }
     }
     dialogComposable()
@@ -100,9 +96,7 @@ fun rememberConfirmDialog(
 @Composable
 fun ConfirmDialog(title: String, content: String, onConfirm: () -> Unit, onCancel: () -> Unit) {
     WindowDialog(
-        onDismissRequest = { },
-        show = true,
-        title = title
+        onDismissRequest = { }, show = true, title = title
     ) {
         Column {
             Text(text = content)
@@ -128,9 +122,7 @@ fun ConfirmDialog(title: String, content: String, onConfirm: () -> Unit, onCance
 
 @Composable
 fun rememberVerifyPwdDialog(
-    title: String,
-    errorText: String,
-    onVerify: (String) -> Boolean
+    title: String, errorText: String, onVerify: (String) -> Boolean
 ): VerifyPwdDialogHandle {
     val showDialog = rememberSaveable {
         mutableStateOf(false)
@@ -159,21 +151,15 @@ fun rememberVerifyPwdDialog(
     }
     val dialogComposable = @Composable {
         if (showDialog.value) {
-            VerifyPwdDialog(
-                title,
-                errorText,
-                onCancel = {
-                    scope.launch {
-                        result.send(false)
-                    }
-                },
-                onVerify,
-                onVerifySuccess = {
-                    scope.launch {
-                        result.send(true)
-                    }
+            VerifyPwdDialog(title, errorText, onCancel = {
+                scope.launch {
+                    result.send(false)
                 }
-            )
+            }, onVerify, onVerifySuccess = {
+                scope.launch {
+                    result.send(true)
+                }
+            })
         }
     }
     dialogComposable()
@@ -214,15 +200,14 @@ fun VerifyPwdDialog(
             onValueChange = { text.value = it },
             singleLine = true,
             keyboardOptions = KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.NumberPassword,
-                imeAction = ImeAction.Done
+                keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions {
                 scope.launch {
                     verifyPassword(text.value)
                 }
             },
-            labelColor = if (hasError.value) Color.Red else MiuixTheme.colorScheme.onSecondaryContainer,
+            colors = TextFieldDefaults.textFieldColors(labelColor = if (hasError.value) Color.Red else MiuixTheme.colorScheme.onSecondaryContainer),
             label = if (hasError.value) {
                 errorText
             } else {
@@ -280,19 +265,15 @@ fun rememberSetPwdDialog(
     }
     val dialogComposable = @Composable {
         if (showDialog.value) {
-            SetPwdDialog(
-                title = title,
-                onCancel = {
-                    scope.launch {
-                        result.send("")
-                    }
-                },
-                onConfirm = {
-                    scope.launch {
-                        result.send(it)
-                    }
+            SetPwdDialog(title = title, onCancel = {
+                scope.launch {
+                    result.send("")
                 }
-            )
+            }, onConfirm = {
+                scope.launch {
+                    result.send(it)
+                }
+            })
         }
     }
     dialogComposable()
@@ -301,9 +282,7 @@ fun rememberSetPwdDialog(
 
 @Composable
 fun SetPwdDialog(
-    title: String,
-    onCancel: () -> Unit,
-    onConfirm: (String) -> Unit
+    title: String, onCancel: () -> Unit, onConfirm: (String) -> Unit
 ) {
     val text = rememberSaveable {
         mutableStateOf("")
@@ -315,9 +294,7 @@ fun SetPwdDialog(
     }
 
     WindowDialog(
-        show = true,
-        onDismissRequest = { },
-        title = title
+        show = true, onDismissRequest = { }, title = title
     ) {
         TextField(
             value = text.value,
@@ -327,8 +304,7 @@ fun SetPwdDialog(
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.NumberPassword,
-                imeAction = ImeAction.Done
+                keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions {
                 if (curCount >= 4) {

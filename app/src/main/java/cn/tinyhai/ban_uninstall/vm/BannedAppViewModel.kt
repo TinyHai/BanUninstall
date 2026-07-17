@@ -23,17 +23,14 @@ data class AppInfo(
 
 data class BannedAppState(
     val isRefreshing: Boolean = false,
+    val hasLoaded: Boolean = false,
     val appInfos: List<AppInfo> = emptyList(),
 ) {
-    val hasLoaded: Boolean get() = this !== Empty
-
     companion object {
         val Empty = BannedAppState()
 
         val comparator: Comparator<AppInfo> by lazy {
             compareBy<AppInfo> {
-                if (it.banned) -1 else 1
-            } then compareBy {
                 HanziToPinyin.getInstance().toPinyin(it.label)
             } then compareBy {
                 it.pkgInfo.packageName
@@ -65,6 +62,9 @@ class BannedAppViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             loadAppList()
+            updateState(_state) {
+                it.copy(hasLoaded = true)
+            }
         }
     }
 

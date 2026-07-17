@@ -32,6 +32,7 @@ data class OpRecordInfo(
 
 data class OpRecordState(
     val isRefreshing: Boolean = false,
+    val hasLoaded: Boolean = false,
     val hasPwd: Boolean = false,
     val showAllowed: Boolean = true,
     val showPrevented: Boolean = true,
@@ -39,8 +40,6 @@ data class OpRecordState(
     val showClearData: Boolean = true,
     val records: List<OpRecordInfo> = emptyList()
 ) {
-    val hasLoaded: Boolean get() = this !== Empty
-
     companion object {
         val Empty = OpRecordState()
     }
@@ -65,7 +64,7 @@ class OpRecordViewModel : ViewModel() {
             loadOpRecordList()
             val hasPwd = authClient.hasPwd()
             updateState(_state) {
-                it.copy(hasPwd = hasPwd)
+                it.copy(hasPwd = hasPwd, hasLoaded = true)
             }
         }
     }
@@ -83,7 +82,6 @@ class OpRecordViewModel : ViewModel() {
     private suspend fun loadOpRecordList() {
         val pm = App.app.packageManager
         val records = withContext(Dispatchers.IO) {
-            delay(100)
             authClient.allOpRecord.asReversed().map {
                 val pkgInfo = it.pkgInfo
                 val appInfo =

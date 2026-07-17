@@ -1,7 +1,6 @@
 package cn.tinyhai.ban_uninstall.ui.screen
 
 import android.graphics.drawable.Drawable
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -21,12 +19,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -63,6 +61,7 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.LocalContentColor
@@ -135,6 +134,9 @@ fun BannedAppScreen(navigator: Navigator) {
             }
         },
         popupHost = {
+            val lastSearchText = remember {
+                arrayOf("")
+            }
             val queryPinyin by remember {
                 derivedStateOf { searchStatus.searchText.toLowercasePinyin() }
             }
@@ -144,24 +146,46 @@ fun BannedAppScreen(navigator: Navigator) {
             var filteredAppInfos by remember {
                 mutableStateOf(emptyList<AppInfo>())
             }
-            LaunchedEffect(queryLower, queryPinyin) {
+            LaunchedEffect(queryLower, queryPinyin, state.appInfos) {
                 when {
                     queryPinyin.isBlank() && queryLower.isBlank() -> {
+                        filteredAppInfos = emptyList()
                         searchStatus =
                             searchStatus.copy(resultStatus = SearchStatus.ResultStatus.DEFAULT)
                     }
 
                     else -> {
-                        searchStatus =
-                            searchStatus.copy(resultStatus = SearchStatus.ResultStatus.LOAD)
+                        if (filteredAppInfos.isEmpty()) {
+                            searchStatus =
+                                searchStatus.copy(resultStatus = SearchStatus.ResultStatus.LOAD)
+                        }
                         filteredAppInfos = withContext(Dispatchers.IO) {
                             state.appInfos.filter {
                                 it.label.toLowercasePinyin()
                                     .contains(queryPinyin) || it.pkgInfo.packageName.contains(
                                     queryLower
                                 )
+                            }.let {
+                                if (lastSearchText[0] != searchStatus.searchText) it.sortedWith { info, info1 ->
+                                    when {
+                                        info.banned -> -1
+                                        info1.banned -> 1
+                                        else -> 0
+                                    }
+                                } else {
+                                    val filtered = filteredAppInfos.toMutableList()
+                                    val new = it.toMutableList()
+                                    for (i in filtered.indices) {
+                                        val pos = new.indexOfFirst { it.key == filtered[i].key }
+                                        if (pos >= 0) {
+                                            filtered[i] = new.removeAt(pos)
+                                        }
+                                    }
+                                    filtered
+                                }
                             }
                         }
+
                         if (filteredAppInfos.isEmpty()) {
                             searchStatus =
                                 searchStatus.copy(resultStatus = SearchStatus.ResultStatus.EMPTY)
@@ -171,13 +195,15 @@ fun BannedAppScreen(navigator: Navigator) {
                         }
                     }
                 }
+                lastSearchText[0] = searchStatus.searchText
             }
             searchStatus.SearchPager(
                 onSearchStatusChange = {
                     searchStatus = it
                 },
                 searchBarTopPadding = dynamicTopPadding,
-                defaultResult = {},
+                defaultResult = {
+                },
             ) {
                 itemsIndexed(filteredAppInfos, key = { _, item -> item.key }) { idx, item ->
                     AppItem(
@@ -220,6 +246,16 @@ fun BannedAppScreen(navigator: Navigator) {
                 topAppBarScrollBehavior = scrollBehavior,
                 contentPadding = it
             ) {
+                var bannedAppInfos by remember { mutableStateOf(emptyList<AppInfo>()) }
+                var freedAppInfos by remember { mutableStateOf(emptyList<AppInfo>()) }
+                LaunchedEffect(state.appInfos) {
+                    withContext(Dispatchers.IO) {
+                        state.appInfos.groupBy { appInfo -> appInfo.banned }.run {
+                            bannedAppInfos = this[true].orEmpty()
+                            freedAppInfos = this[false].orEmpty()
+                        }
+                    }
+                }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -229,9 +265,6 @@ fun BannedAppScreen(navigator: Navigator) {
                         .padding(it)
                         .padding(horizontal = 16.dp),
                 ) {
-                    val index = state.appInfos.indexOfFirst { !it.banned }
-                    val bannedAppInfos = state.appInfos.subList(0, index)
-                    val freedAppInfos = state.appInfos.subList(index, state.appInfos.size)
                     if (bannedAppInfos.isNotEmpty()) {
                         item(key = Int.MIN_VALUE) {
                             SmallTitle(

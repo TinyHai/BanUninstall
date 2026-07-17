@@ -66,7 +66,9 @@ import androidx.compose.ui.zIndex
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import cn.tinyhai.ban_uninstall.R
 import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -241,9 +243,24 @@ fun SearchStatus.SearchPager(
             when (searchStatus.resultStatus) {
                 SearchStatus.ResultStatus.DEFAULT -> defaultResult()
 
-                SearchStatus.ResultStatus.EMPTY -> {}
+                SearchStatus.ResultStatus.EMPTY -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(stringResource(R.string.text_empty_list))
+                    }
+                }
 
-                SearchStatus.ResultStatus.LOAD -> {}
+                SearchStatus.ResultStatus.LOAD -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        InfiniteProgressIndicator()
+                    }
+                }
 
                 SearchStatus.ResultStatus.SHOW -> LazyColumn(
                     Modifier
