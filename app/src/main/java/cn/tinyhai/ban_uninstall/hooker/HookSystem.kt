@@ -273,8 +273,8 @@ class HookSystem(
         }
         val args = param.args
         val packageName = args[0] as String
-        val observer = param.args[args.lastIndex - 1] as? IPackageDataObserver
-        val userId = param.args[args.lastIndex] as Int
+        val observer = param.args.firstOrNull { it is IPackageDataObserver } as? IPackageDataObserver
+        val userId = param.args.firstOrNull { it is Int } as Int
         logger.info("${param.method.name}(packageName: $packageName, observer: ${observer.hashCode()}, userId: $userId)")
         val isUseBannedList = XSharedPrefs.isUseBannedList
         val isShowConfirm = XSharedPrefs.isShowConfirm
