@@ -56,7 +56,8 @@ jobs:
           path: app/build/outputs/apk/**/*.apk
 
       - name: Release to current repository
-        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ format('BanUninstall_{0}', env.TAG_NAME) }}
           draft: ${{ inputs.draft }}
@@ -67,8 +68,8 @@ jobs:
             app/build/outputs/apk/**/*.apk
 
       - name: Release to xposed module repository
-        uses: softprops/action-gh-release@v2
-        if: ${{ inputs.publish }}
+        if: ${{ github.ref == 'refs/heads/main' && inputs.publish }}
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ format('BanUninstall_{0}', env.TAG_NAME) }}
           tag_name: ${{ env.TAG_NAME }}
